@@ -73,6 +73,7 @@ public class Descargo extends Auditable {
         this.plantaPresentacion = plantaPresentacion;
     }
 
+
     public Integer getCantidad() {
         return cantidad;
     }

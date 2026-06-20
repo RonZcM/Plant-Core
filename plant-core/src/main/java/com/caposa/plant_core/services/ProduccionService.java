@@ -17,16 +17,13 @@ public class ProduccionService {
 
     @Transactional
     public Produccion registrarProduccion(Produccion nuevaProduccion) {
-        // 1. Guardamos el registro histórico en la bitácora de producción
         Produccion produccionGuardada = produccionRepo.save(nuevaProduccion);
 
-        // 2. Extraemos los IDs necesarios para actualizar el inventario maestro
-        Long plantaId = produccionGuardada.getPlantaPresentacion().getPlanta().getId();
-        Long presentacionId = produccionGuardada.getPlantaPresentacion().getPresentacion().getId();
+        // Extraemos solo el ID maestro del inventario
+        Long idInventario = produccionGuardada.getPlantaPresentacion().getId();
         Integer cantidadProducida = produccionGuardada.getCantidad();
 
-        // 3. Llamamos a nuestro servicio de inventario para que sume el stock automáticamente
-        inventarioService.agregarStock(plantaId, presentacionId, cantidadProducida);
+        inventarioService.agregarStock(idInventario, cantidadProducida);
 
         return produccionGuardada;
     }

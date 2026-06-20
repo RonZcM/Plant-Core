@@ -12,30 +12,20 @@ public class InventarioService {
     @Autowired
     private PlantaPresentacionRepository inventarioRepo;
 
-    // Método para sumar stock (Ej: Cuando hay una nueva Producción)
     @Transactional
-    public PlantaPresentacion agregarStock(Long plantaId, Long presentacionId, Integer cantidad) {
-        // Buscamos si ya existe esta planta en esta maceta/bolsa
-        PlantaPresentacion inventario = inventarioRepo.findByPlantaIdAndPresentacionId(plantaId, presentacionId)
-                .orElseThrow(() -> new RuntimeException("No existe registro en inventario para esta Planta y Presentación. Por favor, asócielos primero en el catálogo."));
-
-        inventario.setInventario(inventario.getInventario() + cantidad);
-        return inventarioRepo.save(inventario);
+    public PlantaPresentacion agregarStock(Long id, Integer cantidad) {
+        PlantaPresentacion inv = inventarioRepo.findById(id).orElseThrow(() -> new RuntimeException("No existe el vínculo"));
+        inv.setStock(inv.getStock() + cantidad);
+        return inventarioRepo.save(inv);
     }
 
-    // Método para restar stock (Ej: Descargos o Siembra a Campo)
     @Transactional
-    public PlantaPresentacion restarStock(Long plantaId, Long presentacionId, Integer cantidad) {
-        PlantaPresentacion inventario = inventarioRepo.findByPlantaIdAndPresentacionId(plantaId, presentacionId)
-                .orElseThrow(() -> new RuntimeException("No se encontró el inventario para la planta seleccionada."));
-
-        // Validación de negocio crucial para el vivero
-        if (inventario.getInventario() < cantidad) {
-            throw new RuntimeException("Stock insuficiente. No puedes descargar " + cantidad +
-                    " porque solo hay " + inventario.getInventario() + " disponibles.");
+    public PlantaPresentacion restarStock(Long id, Integer cantidad) {
+        PlantaPresentacion inv = inventarioRepo.findById(id).orElseThrow(() -> new RuntimeException("No existe el vínculo"));
+        if (inv.getStock() < cantidad) {
+            throw new RuntimeException("Stock insuficiente.");
         }
-
-        inventario.setInventario(inventario.getInventario() - cantidad);
-        return inventarioRepo.save(inventario);
+        inv.setStock(inv.getStock() - cantidad);
+        return inventarioRepo.save(inv);
     }
 }

@@ -1,13 +1,11 @@
 package com.caposa.plant_core.models;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "planta_presentacion")
 public class PlantaPresentacion extends Auditable {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -20,17 +18,17 @@ public class PlantaPresentacion extends Auditable {
     @JoinColumn(name = "presentacion_id", nullable = false)
     private Presentacion presentacion;
 
-    private Integer inventario; // Aquí se guarda el stock actual
+    @Column(unique = true, length = 20)
+    private String codigo; // Ej: PQCA01001
 
-    public PlantaPresentacion() {
-    }
+    @Column(length = 255)
+    private String detalle;
 
-    public PlantaPresentacion(Long id, Planta planta, Presentacion presentacion, Integer inventario, LocalDateTime crbyat, LocalDateTime upbyat) {
-        this.id = id;
-        this.planta = planta;
-        this.presentacion = presentacion;
-        this.inventario = inventario;
-    }
+    @Column(length = 50)
+    private String tamanio; // Ej: 8 pulgadas, 40 cm
+
+    @Column(nullable = false)
+    private Integer stock; // Antes se llamaba 'inventario'
 
     public Long getId() {
         return id;
@@ -56,12 +54,35 @@ public class PlantaPresentacion extends Auditable {
         this.presentacion = presentacion;
     }
 
-    public Integer getInventario() {
-        return inventario;
+    public String getCodigo() {
+        return codigo;
     }
 
-    public void setInventario(Integer inventario) {
-        this.inventario = inventario;
+    public void setCodigo(String codigo) {
+        this.codigo = codigo;
     }
 
+    public String getDetalle() {
+        return detalle;
+    }
+
+    public void setDetalle(String detalle) {
+        this.detalle = detalle;
+    }
+
+    public String getTamanio() {
+        return tamanio;
+    }
+
+    public void setTamanio(String tamanio) {
+        this.tamanio = tamanio;
+    }
+
+    public Integer getStock() {
+        return stock;
+    }
+
+    public void setStock(Integer stock) {
+        this.stock = stock;
+    }
 }

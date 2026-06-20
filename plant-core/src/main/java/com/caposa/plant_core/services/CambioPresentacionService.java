@@ -17,25 +17,15 @@ public class CambioPresentacionService {
 
     @Transactional
     public CambioPresentacion registrarCambio(CambioPresentacion nuevoCambio) {
-        // 1. Guardar el registro histórico
         CambioPresentacion cambioGuardado = cambioRepo.save(nuevoCambio);
 
-        // 2. Extraer datos del Origen (de dónde sale la planta)
-        Long origenPlantaId = cambioGuardado.getOrigen().getPlanta().getId();
-        Long origenPresentacionId = cambioGuardado.getOrigen().getPresentacion().getId();
-
-        // 3. Extraer datos del Destino (a dónde entra la planta)
-        Long destinoPlantaId = cambioGuardado.getDestino().getPlanta().getId();
-        Long destinoPresentacionId = cambioGuardado.getDestino().getPresentacion().getId();
-
+        Long origenId = cambioGuardado.getOrigen().getId();
+        Long destinoId = cambioGuardado.getDestino().getId();
         Integer cantidad = cambioGuardado.getCantidad();
 
-        // 4. Ejecutar el movimiento de inventario doble
-        // Restamos del origen...
-        inventarioService.restarStock(origenPlantaId, origenPresentacionId, cantidad);
-
-        // ...y sumamos al destino
-        inventarioService.agregarStock(destinoPlantaId, destinoPresentacionId, cantidad);
+        // Restamos del origen y sumamos al destino usando sus respectivos IDs de inventario
+        inventarioService.restarStock(origenId, cantidad);
+        inventarioService.agregarStock(destinoId, cantidad);
 
         return cambioGuardado;
     }

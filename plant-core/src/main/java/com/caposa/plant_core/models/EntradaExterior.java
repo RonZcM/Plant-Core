@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "produccion")
-public class Produccion extends Auditable {
+@Table(name = "entrada_exterior")
+public class EntradaExterior extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,16 +22,17 @@ public class Produccion extends Auditable {
     @JoinColumn(name = "planta_presentacion_id", nullable = false)
     private PlantaPresentacion plantaPresentacion;
 
-    // AQUI ESTÁ EL CAMBIO CLAVE: Relación con la tabla Origen
-    @ManyToOne
-    @JoinColumn(name = "origen_id", nullable = false)
-    private Origen origen;
+    @Column(nullable = false, length = 255)
+    private String tipo; // "compra" o "devolucion"
 
     @Column(nullable = false)
     private Integer cantidad;
 
-    @Column(name = "siembra_tiempo_horas")
-    private Double siembraTiempoHoras; // Double por si ponen 1.5 horas
+    @Column(length = 255)
+    private String detalle; // Ej: "compra de plantas del vivero de soya"
+
+    @Column(name = "total_precio")
+    private Double totalPrecio; // Nullable si es devolución
 
     // Getters y Setters
     public Long getId() { return id; }
@@ -42,10 +43,12 @@ public class Produccion extends Auditable {
     public void setTrabajador(Empleado trabajador) { this.trabajador = trabajador; }
     public PlantaPresentacion getPlantaPresentacion() { return plantaPresentacion; }
     public void setPlantaPresentacion(PlantaPresentacion plantaPresentacion) { this.plantaPresentacion = plantaPresentacion; }
-    public Origen getOrigen() { return origen; }
-    public void setOrigen(Origen origen) { this.origen = origen; }
+    public String getTipo() { return tipo; }
+    public void setTipo(String tipo) { this.tipo = tipo; }
     public Integer getCantidad() { return cantidad; }
     public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
-    public Double getSiembraTiempoHoras() { return siembraTiempoHoras; }
-    public void setSiembraTiempoHoras(Double siembraTiempoHoras) { this.siembraTiempoHoras = siembraTiempoHoras; }
+    public String getDetalle() { return detalle; }
+    public void setDetalle(String detalle) { this.detalle = detalle; }
+    public Double getTotalPrecio() { return totalPrecio; }
+    public void setTotalPrecio(Double totalPrecio) { this.totalPrecio = totalPrecio; }
 }
