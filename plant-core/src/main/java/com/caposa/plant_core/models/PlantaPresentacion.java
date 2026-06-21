@@ -11,8 +11,11 @@ public class PlantaPresentacion extends Auditable {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "planta_id", nullable = false)
+    @JoinColumn(name = "planta_id", nullable = true)
     private Planta planta;
+
+    @Column(name = "es_arreglo_combinado")
+    private Boolean esArregloCombinado = false;
 
     @ManyToOne
     @JoinColumn(name = "presentacion_id", nullable = false)
@@ -44,6 +47,14 @@ public class PlantaPresentacion extends Auditable {
 
     public void setPlanta(Planta planta) {
         this.planta = planta;
+    }
+
+    public Boolean getEsArregloCombinado() {
+        return esArregloCombinado;
+    }
+
+    public void setEsArregloCombinado(Boolean esArregloCombinado) {
+        this.esArregloCombinado = esArregloCombinado;
     }
 
     public Presentacion getPresentacion() {

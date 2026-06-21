@@ -6,11 +6,13 @@ import logoCaposa from './assets/CAPOSA-LOGO.png';
 import Empleados from './pages/Empleados';
 import Dashboard from './pages/Dashboard';
 
+import { Toaster } from 'react-hot-toast';
+
 function App() {
   return (
     <Router>
       <div className="flex h-screen bg-gray-100 font-sans">
-        
+        <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
         {/* Sidebar */}
         <aside className="w-64 bg-green-800 text-white flex flex-col shadow-lg z-10 shrink-0">
           

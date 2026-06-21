@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
+import toast from 'react-hot-toast';
 
 export default function Operaciones() {
   const [tabActivo, setTabActivo] = useState('produccion');
@@ -15,8 +16,15 @@ export default function Operaciones() {
   // Estados de los Formularios
   const formBase = { fecha: hoy, trabajadorId: '', plantaPresentacionId: '', cantidad: '' };
   
-  const [formProduccion, setFormProduccion] = useState({ ...formBase, origenId: '', siembraTiempoHoras: '' });
-  const [formCambio, setFormCambio] = useState({ fecha: hoy, trabajadorId: '', origenId: '', destinoId: '', cantidad: '' });
+  const [formProduccion, setFormProduccion] = useState({ ...formBase, origenesIds: [], siembraTiempoHoras: '' });
+  const [formCambio, setFormCambio] = useState({ 
+    fecha: hoy, 
+    trabajadorId: '', 
+    destinoId: '', 
+    cantidadDestino: '',
+    detalles: [{ origenId: '', cantidad: '' }]
+  });
+  
   const [formDescargo, setFormDescargo] = useState({ ...formBase, detalle: '' });
   const [formEntrada, setFormEntrada] = useState({ ...formBase, tipo: 'compra', detalle: '', totalPrecio: '' });
 
@@ -43,40 +51,74 @@ export default function Operaciones() {
 
   const handleSubmitProduccion = async (e) => {
     e.preventDefault();
+    if (formProduccion.origenesIds.length === 0) {
+      toast.error("Debes seleccionar al menos un origen.");
+      return;
+    }
+
     try {
       await api.post('/produccion', {
         fecha: formProduccion.fecha,
         trabajador: { id: formProduccion.trabajadorId },
         plantaPresentacion: { id: formProduccion.plantaPresentacionId },
-        origen: { id: formProduccion.origenId },
+        origenes: formProduccion.origenesIds.map(id => ({ id })),
         cantidad: Number(formProduccion.cantidad),
         siembraTiempoHoras: Number(formProduccion.siembraTiempoHoras),
         createdBy: 'Liliam' // Simulación de usuario logueado
       });
-      alert("Producción registrada con éxito. Inventario actualizado.");
-      setFormProduccion({ ...formBase, origenId: '', siembraTiempoHoras: '' });
+      toast.success("Producción registrada con éxito. Inventario actualizado.");
+      setFormProduccion({ ...formBase, origenesIds: [], siembraTiempoHoras: '' });
       cargarCatalogos(); // Refrescar inventario
-    } catch (error) { alert("Error: " + (error.response?.data || error.message)); }
+    } catch (error) { toast.error("Error: " + (error.response?.data || error.message)); }
+  };
+
+  const handleAddDetalleCambio = () => {
+    setFormCambio({
+      ...formCambio,
+      detalles: [...formCambio.detalles, { origenId: '', cantidad: '' }]
+    });
+  };
+
+  const handleRemoveDetalleCambio = (index) => {
+    const nuevosDetalles = formCambio.detalles.filter((_, i) => i !== index);
+    setFormCambio({ ...formCambio, detalles: nuevosDetalles });
+  };
+
+  const handleChangeDetalle = (index, field, value) => {
+    const nuevosDetalles = [...formCambio.detalles];
+    nuevosDetalles[index][field] = value;
+    setFormCambio({ ...formCambio, detalles: nuevosDetalles });
   };
 
   const handleSubmitCambio = async (e) => {
     e.preventDefault();
-    if (formCambio.origenId === formCambio.destinoId) {
-      alert("El origen y el destino no pueden ser el mismo."); return;
+    
+    // Validar que no haya duplicados o vacíos
+    for (const det of formCambio.detalles) {
+      if (!det.origenId || !det.cantidad) {
+        toast.error("Todos los orígenes deben tener planta y cantidad."); return;
+      }
+      if (det.origenId == formCambio.destinoId) {
+        toast.error("Un origen no puede ser igual al destino."); return;
+      }
     }
+
     try {
       await api.post('/cambios-presentacion', {
         fecha: formCambio.fecha,
         trabajador: { id: formCambio.trabajadorId },
-        origen: { id: formCambio.origenId },
         destino: { id: formCambio.destinoId },
-        cantidad: Number(formCambio.cantidad),
+        cantidadDestino: Number(formCambio.cantidadDestino),
+        detalles: formCambio.detalles.map(d => ({
+          origen: { id: d.origenId },
+          cantidadOrigen: Number(d.cantidad)
+        })),
         createdBy: 'Liliam'
       });
-      alert("Trasplante registrado con éxito. Inventario actualizado.");
-      setFormCambio({ fecha: hoy, trabajadorId: '', origenId: '', destinoId: '', cantidad: '' });
+      toast.success("Trasplante/Armado registrado con éxito. Inventario actualizado.");
+      setFormCambio({ fecha: hoy, trabajadorId: '', destinoId: '', cantidadDestino: '', detalles: [{ origenId: '', cantidad: '' }] });
       cargarCatalogos();
-    } catch (error) { alert("Error: " + (error.response?.data || error.message)); }
+    } catch (error) { toast.error("Error: " + (error.response?.data || error.message)); }
   };
 
   const handleSubmitDescargo = async (e) => {
@@ -90,10 +132,10 @@ export default function Operaciones() {
         motivoDescargo: formDescargo.detalle,
         createdBy: 'Liliam'
       });
-      alert("Descargo/Merma registrado con éxito. Inventario actualizado.");
+      toast.success("Descargo/Merma registrado con éxito. Inventario actualizado.");
       setFormDescargo({ ...formBase, detalle: '' });
       cargarCatalogos();
-    } catch (error) { alert("Error: " + (error.response?.data || error.message)); }
+    } catch (error) { toast.error("Error: " + (error.response?.data || error.message)); }
   };
 
   const handleSubmitEntrada = async (e) => {
@@ -109,10 +151,38 @@ export default function Operaciones() {
         totalPrecio: formEntrada.totalPrecio ? Number(formEntrada.totalPrecio) : null,
         createdBy: 'Liliam'
       });
-      alert("Entrada Exterior registrada con éxito. Inventario actualizado.");
+      toast.success("Entrada Exterior registrada con éxito. Inventario actualizado.");
       setFormEntrada({ ...formBase, tipo: 'compra', detalle: '', totalPrecio: '' });
       cargarCatalogos();
-    } catch (error) { alert("Error: " + (error.response?.data || error.message)); }
+    } catch (error) { toast.error("Error: " + (error.response?.data || error.message)); }
+  };
+
+  // --- HELPERS PARA FILTRADO INTELIGENTE ---
+  const getOrigenesDisponibles = (indexFiltrar) => {
+    let disponibles = inventario.filter(i => i.stock > 0);
+    const seleccionados = formCambio.detalles.map((d, i) => i !== indexFiltrar ? Number(d.origenId) : null).filter(Boolean);
+    return disponibles.filter(i => !seleccionados.includes(i.id));
+  };
+
+  const getDestinosFiltrados = () => {
+    const origenesValidos = formCambio.detalles.filter(d => d.origenId);
+    if (origenesValidos.length === 0) return inventario;
+
+    const plantasIds = new Set();
+    origenesValidos.forEach(d => {
+      const inv = inventario.find(i => i.id === Number(d.origenId));
+      if (inv && inv.planta) {
+        plantasIds.add(inv.planta.id);
+      }
+    });
+
+    if (plantasIds.size > 1) {
+      return inventario.filter(i => i.esArregloCombinado);
+    } else if (plantasIds.size === 1) {
+      const plantaId = Array.from(plantasIds)[0];
+      return inventario.filter(i => i.esArregloCombinado || (i.planta && i.planta.id === plantaId));
+    }
+    return inventario;
   };
 
   // --- RENDERIZADO CONDICIONAL DE FORMULARIOS ---
@@ -129,21 +199,16 @@ export default function Operaciones() {
   const SelectorInventario = ({ label, valor, setValor, opciones = inventario }) => (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <select required value={valor} onChange={setValor} className="w-full border-gray-300 rounded-md p-2 border bg-white focus:ring-green-500">
+      <select required value={valor} onChange={setValor} className="w-full border-gray-300 rounded-md p-2 border bg-white focus:ring-green-500 text-sm">
         <option value="">-- Seleccionar Lote/Planta --</option>
         {opciones.map(i => (
           <option key={i.id} value={i.id}>
-            [{i.codigo}] {i.planta?.nombre} - {i.presentacion?.nombre} (Stock: {i.stock})
+            [{i.codigo}] {i.esArregloCombinado ? 'Arreglo Combinado' : i.planta?.nombre} - {i.presentacion?.nombre} (Stock: {i.stock})
           </option>
         ))}
       </select>
     </div>
   );
-
-  const loteOrigenSeleccionado = inventario.find(i => i.id.toString() === formCambio.origenId.toString());
-  const inventarioDestinoFiltrado = loteOrigenSeleccionado
-    ? inventario.filter(i => i.planta?.id === loteOrigenSeleccionado.planta?.id && i.id !== loteOrigenSeleccionado.id)
-    : [];
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -194,14 +259,16 @@ export default function Operaciones() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Origen del Material</label>
-                <select required value={formProduccion.origenId} onChange={e => setFormProduccion({...formProduccion, origenId: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border bg-white">
-                  <option value="">-- Seleccionar Origen --</option>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Orígenes del Material (Puedes elegir varios con Ctrl o Cmd)</label>
+                <select multiple required value={formProduccion.origenesIds} onChange={e => {
+                  const values = Array.from(e.target.selectedOptions, option => option.value);
+                  setFormProduccion({...formProduccion, origenesIds: values});
+                }} className="w-full border-gray-300 rounded-md p-2 border bg-white h-32">
                   {origenes.map(o => <option key={o.id} value={o.id}>{o.codigo} - {o.nombre}</option>)}
                 </select>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Producida</label>
                   <input required type="number" min="1" value={formProduccion.cantidad} onChange={e => setFormProduccion({...formProduccion, cantidad: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border" />
@@ -226,37 +293,51 @@ export default function Operaciones() {
               </div>
               <SelectorTrabajador valor={formCambio.trabajadorId} setValor={e => setFormCambio({...formCambio, trabajadorId: e.target.value})} />
               
-              <div className="md:col-span-2 border-l-4 border-red-500 pl-4 py-2 bg-red-50/50 rounded-r-md">
-                <SelectorInventario 
-                  label="Origen (De dónde se sacan las plantas - RESTA STOCK)" 
-                  valor={formCambio.origenId} 
-                  setValor={e => {
-                    // Si cambia el origen, limpiamos el destino para que no quede basura
-                    setFormCambio({...formCambio, origenId: e.target.value, destinoId: ''});
-                  }} 
-                />
+              <div className="md:col-span-2 border-l-4 border-red-500 p-4 bg-red-50/50 rounded-r-md">
+                <h4 className="font-bold text-red-700 mb-4">Orígenes (Plantas a descontar)</h4>
+                
+                {formCambio.detalles.map((detalle, index) => (
+                  <div key={index} className="flex gap-4 items-end mb-4 bg-white p-3 rounded shadow-sm border border-red-100">
+                    <div className="flex-1">
+                      <SelectorInventario 
+                        label={`Planta / Lote ${index + 1}`}
+                        valor={detalle.origenId} 
+                        setValor={e => handleChangeDetalle(index, 'origenId', e.target.value)} 
+                        opciones={getOrigenesDisponibles(index)}
+                      />
+                    </div>
+                    <div className="w-32">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+                      <input required type="number" min="1" value={detalle.cantidad} onChange={e => handleChangeDetalle(index, 'cantidad', e.target.value)} className="w-full border-gray-300 rounded-md p-2 border" />
+                    </div>
+                    {formCambio.detalles.length > 1 && (
+                      <button type="button" onClick={() => handleRemoveDetalleCambio(index)} className="bg-red-100 text-red-600 px-3 py-2 rounded font-bold hover:bg-red-200 h-[42px]">X</button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" onClick={handleAddDetalleCambio} className="text-sm font-semibold text-red-600 bg-white border border-red-200 px-4 py-2 rounded hover:bg-red-50">+ Añadir otro origen</button>
               </div>
 
-              <div className="md:col-span-2 border-l-4 border-green-500 pl-4 py-2 bg-green-50/50 rounded-r-md">
-                <SelectorInventario 
-                  label="Destino (A qué presentación pasan - SUMA STOCK)" 
-                  valor={formCambio.destinoId} 
-                  setValor={e => setFormCambio({...formCambio, destinoId: e.target.value})} 
-                  opciones={inventarioDestinoFiltrado} // <-- AQUÍ APLICAMOS EL FILTRO
-                />
-                {formCambio.origenId && inventarioDestinoFiltrado.length === 0 && (
-                  <p className="text-xs text-red-600 mt-1">
-                    * No hay otros lotes de esta misma planta registrados en el inventario. Ve a Catálogos a crear el vínculo primero.
-                  </p>
-                )}
+              <div className="md:col-span-2 border-l-4 border-green-500 p-4 bg-green-50/50 rounded-r-md">
+                <h4 className="font-bold text-green-700 mb-4">Destino (Planta/Arreglo a Sumar)</h4>
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <SelectorInventario 
+                      label="Presentación Final" 
+                      valor={formCambio.destinoId} 
+                      setValor={e => setFormCambio({...formCambio, destinoId: e.target.value})} 
+                      opciones={getDestinosFiltrados()}
+                    />
+                  </div>
+                  <div className="w-48">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cant. Resultante</label>
+                    <input required type="number" min="1" value={formCambio.cantidadDestino} onChange={e => setFormCambio({...formCambio, cantidadDestino: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border" />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad a Trasplantar</label>
-                <input required type="number" min="1" value={formCambio.cantidad} onChange={e => setFormCambio({...formCambio, cantidad: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border" />
-              </div>
             </div>
-            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-md transition-colors shadow-sm">Registrar Trasplante</button>
+            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-md transition-colors shadow-sm">Registrar Trasplante / Armado</button>
           </form>
         )}
 
@@ -271,7 +352,7 @@ export default function Operaciones() {
               <SelectorTrabajador valor={formDescargo.trabajadorId} setValor={e => setFormDescargo({...formDescargo, trabajadorId: e.target.value})} />
               
               <div className="md:col-span-2">
-                <SelectorInventario label="Lote Afectado (Se restará stock)" valor={formDescargo.plantaPresentacionId} setValor={e => setFormDescargo({...formDescargo, plantaPresentacionId: e.target.value})} />
+                <SelectorInventario label="Lote Afectado (Se restará stock)" valor={formDescargo.plantaPresentacionId} setValor={e => setFormDescargo({...formDescargo, plantaPresentacionId: e.target.value})} opciones={inventario.filter(i => i.stock > 0)} />
               </div>
 
               <div>

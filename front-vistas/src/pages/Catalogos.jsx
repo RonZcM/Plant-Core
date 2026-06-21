@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
+import toast from 'react-hot-toast';
 
 export default function Catalogos() {
   const [tabActivo, setTabActivo] = useState('plantas');
@@ -36,7 +37,9 @@ export default function Catalogos() {
     presentacionId: '',
     codigo: '',
     detalle: '',
-    tamanio: ''
+    tamanioNumero: '',
+    tamanioUnidad: 'pulgadas',
+    esArregloCombinado: false
   });
 
   useEffect(() => {
@@ -80,7 +83,7 @@ export default function Catalogos() {
     e.preventDefault();
 
     if (!nuevoOrigen.codigo.trim() || !nuevoOrigen.nombre.trim()) {
-      alert("El código y el nombre son obligatorios.");
+      toast.error("El código y el nombre son obligatorios.");
       return;
     }
 
@@ -101,9 +104,9 @@ export default function Catalogos() {
       cargarOrigenes();
     } catch (error) {
       if (error.response && error.response.data) {
-        alert(error.response.data);
+        toast.error(error.response.data);
       } else {
-        alert("Error al guardar origen.");
+        toast.error("Error al guardar origen.");
       }
     }
   };
@@ -118,8 +121,9 @@ export default function Catalogos() {
     if (window.confirm("¿Estás seguro de eliminar este origen?")) {
       try {
         await api.delete(`/origenes/${id}`);
+        toast.success("Origen eliminado con éxito.");
         cargarOrigenes();
-      } catch (error) { alert("Error al eliminar origen."); }
+      } catch (error) { toast.error(error.response?.data || "Error al eliminar origen."); }
     }
   };
 
@@ -138,28 +142,29 @@ export default function Catalogos() {
   const handleSubmitVinculo = async (e) => {
     e.preventDefault();
 
-    if (!nuevoVinculo.plantaId || !nuevoVinculo.presentacionId || !nuevoVinculo.codigo.trim()) {
-      alert("La planta, presentación y código son obligatorios.");
+    if ((!nuevoVinculo.esArregloCombinado && !nuevoVinculo.plantaId) || !nuevoVinculo.presentacionId || !nuevoVinculo.codigo.trim()) {
+      toast.error("La presentación, el código, y la planta (si no es arreglo) son obligatorios.");
       return;
     }
 
     try {
       await api.post('/planta-presentacion', {
-        planta: { id: nuevoVinculo.plantaId },
+        planta: nuevoVinculo.esArregloCombinado ? null : { id: nuevoVinculo.plantaId },
+        esArregloCombinado: nuevoVinculo.esArregloCombinado,
         presentacion: { id: nuevoVinculo.presentacionId },
         codigo: nuevoVinculo.codigo.trim(),
         detalle: nuevoVinculo.detalle,
-        tamanio: nuevoVinculo.tamanio,
+        tamanio: nuevoVinculo.tamanioNumero ? `${nuevoVinculo.tamanioNumero} ${nuevoVinculo.tamanioUnidad}` : '',
         stock: 0,
         createdBy: 'Admin'
       });
-      setNuevoVinculo({ plantaId: '', presentacionId: '', codigo: '', detalle: '', tamanio: '' });
+      setNuevoVinculo({ plantaId: '', presentacionId: '', codigo: '', detalle: '', tamanioNumero: '', tamanioUnidad: 'pulgadas', esArregloCombinado: false });
       cargarVinculos();
     } catch (error) {
       if (error.response && error.response.data) {
-        alert(error.response.data);
+        toast.error(error.response.data);
       } else {
-        alert("Error al crear el vínculo.");
+        toast.error("Error al crear el vínculo.");
       }
     }
   };
@@ -168,12 +173,13 @@ export default function Catalogos() {
     if (window.confirm("¿Estás seguro de eliminar este vínculo del catálogo?")) {
       try {
         await api.delete(`/planta-presentacion/${id}`);
+        toast.success("Vínculo eliminado con éxito.");
         cargarVinculos();
       } catch (error) {
         if (error.response && error.response.data) {
-          alert(error.response.data); // Muestra el error de stock > 0
+          toast.error(error.response.data); // Muestra el error de stock > 0
         } else {
-          alert("Error al eliminar el vínculo.");
+          toast.error("Error al eliminar el vínculo.");
         }
       }
     }
@@ -186,7 +192,7 @@ const handleSubmitPlanta = async (e) => {
 
     // 1. Validación Frontend: Evitar espacios en blanco
     if (!nuevaPlanta.codigo.trim() || !nuevaPlanta.nombre.trim()) {
-      alert("El código y el nombre son obligatorios y no pueden estar vacíos.");
+      toast.error("El código y el nombre son obligatorios y no pueden estar vacíos.");
       return;
     }
 
@@ -225,9 +231,9 @@ const handleSubmitPlanta = async (e) => {
     } catch (error) { 
       // 2. Validación Backend: Mostrar el mensaje que manda Spring Boot
       if (error.response && error.response.data) {
-        alert(error.response.data); // Muestra: "El código 'X' ya está registrado..."
+        toast.error(error.response.data); // Muestra: "El código 'X' ya está registrado..."
       } else {
-        alert("Error al guardar la planta. Verifica la conexión.");
+        toast.error("Error al guardar la planta. Verifica la conexión.");
       }
     }
   };
@@ -245,8 +251,9 @@ const handleSubmitPlanta = async (e) => {
     if (window.confirm("¿Estás seguro de eliminar esta planta?")) {
       try {
         await api.delete(`/plantas/${id}`);
+        toast.success("Planta eliminada con éxito.");
         cargarPlantas();
-      } catch (error) { alert("Error al eliminar (Puede que tenga inventario asociado)"); }
+      } catch (error) { toast.error(error.response?.data || "Error al eliminar (Puede que tenga inventario asociado)"); }
     }
   };
 
@@ -271,7 +278,7 @@ const handleSubmitPlanta = async (e) => {
     e.preventDefault();
 
     if (!nuevaPresentacion.codigo.trim() || !nuevaPresentacion.nombre.trim() || nuevaPresentacion.cc === '' || nuevaPresentacion.requisicion === '') {
-      alert("Todos los campos son obligatorios.");
+      toast.error("Todos los campos son obligatorios.");
       return;
     }
 
@@ -294,9 +301,9 @@ const handleSubmitPlanta = async (e) => {
       cargarPresentaciones();
     } catch (error) {
       if (error.response && error.response.data) {
-        alert(error.response.data);
+        toast.error(error.response.data);
       } else {
-        alert("Error al guardar presentación.");
+        toast.error("Error al guardar presentación.");
       }
     }
   };
@@ -311,8 +318,9 @@ const handleSubmitPlanta = async (e) => {
     if (window.confirm("¿Estás seguro de eliminar esta presentación?")) {
       try {
         await api.delete(`/presentaciones/${id}`);
+        toast.success("Presentación eliminada con éxito.");
         cargarPresentaciones();
-      } catch (error) { alert("Error al eliminar (Puede que tenga inventario asociado)"); }
+      } catch (error) { toast.error(error.response?.data || "Error al eliminar (Puede que tenga inventario asociado)"); }
     }
   };
 
@@ -638,18 +646,33 @@ const handleSubmitPlanta = async (e) => {
             <h3 className="text-lg font-bold text-gray-800 mb-4">Vincular al Inventario</h3>
             <form onSubmit={handleSubmitVinculo} className="space-y-4">
               
+              <div className="flex items-center mt-2 mb-2">
+                <input
+                  type="checkbox"
+                  id="esArreglo"
+                  checked={nuevoVinculo.esArregloCombinado}
+                  onChange={e => setNuevoVinculo({...nuevoVinculo, esArregloCombinado: e.target.checked, plantaId: e.target.checked ? '' : nuevoVinculo.plantaId})}
+                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                />
+                <label htmlFor="esArreglo" className="ml-2 block text-sm text-gray-900 font-medium">
+                  Es Arreglo Combinado
+                </label>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cód. Inventario</label>
                 <input required type="text" value={nuevoVinculo.codigo} onChange={e => setNuevoVinculo({...nuevoVinculo, codigo: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border focus:ring-green-500" placeholder="Ej: PQCA01001" />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Planta</label>
-                <select required value={nuevoVinculo.plantaId} onChange={e => setNuevoVinculo({...nuevoVinculo, plantaId: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border bg-white">
-                  <option value="">-- Elige --</option>
-                  {plantas.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                </select>
-              </div>
+              {!nuevoVinculo.esArregloCombinado && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Planta</label>
+                  <select required={!nuevoVinculo.esArregloCombinado} value={nuevoVinculo.plantaId} onChange={e => setNuevoVinculo({...nuevoVinculo, plantaId: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border bg-white">
+                    <option value="">-- Elige --</option>
+                    {plantas.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                  </select>
+                </div>
+              )}
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Presentación</label>
@@ -662,11 +685,17 @@ const handleSubmitPlanta = async (e) => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tamaño</label>
-                  <input type="text" value={nuevoVinculo.tamanio} onChange={e => setNuevoVinculo({...nuevoVinculo, tamanio: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border focus:ring-green-500" placeholder="Ej: 8 pulgadas" />
+                  <div className="flex gap-2">
+                    <input type="number" min="0" step="any" value={nuevoVinculo.tamanioNumero} onChange={e => setNuevoVinculo({...nuevoVinculo, tamanioNumero: e.target.value})} className="w-1/2 border-gray-300 rounded-md p-2 border focus:ring-green-500" placeholder="Ej: 8" />
+                    <select value={nuevoVinculo.tamanioUnidad} onChange={e => setNuevoVinculo({...nuevoVinculo, tamanioUnidad: e.target.value})} className="w-1/2 border-gray-300 rounded-md p-2 border bg-white focus:ring-green-500">
+                      <option value="pulgadas">pulgadas</option>
+                      <option value="cm">cm</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Detalle</label>
-                  <textarea rows="2" value={nuevoVinculo.detalle} onChange={e => setNuevoVinculo({...nuevoVinculo, detalle: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border focus:ring-green-500" placeholder="Info. complementaria"></textarea>
+                  <textarea rows="2" value={nuevoVinculo.detalle} onChange={e => setNuevoVinculo({...nuevoVinculo, detalle: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border focus:ring-green-500" placeholder="Ej: 5 Plantas"></textarea>
                 </div>
               </div>
 
@@ -696,7 +725,7 @@ const handleSubmitPlanta = async (e) => {
                     <tr key={v.id} className="hover:bg-gray-50">
                       <td className="px-6 py-3 font-mono text-sm font-bold text-gray-800">{v.codigo}</td>
                       <td className="px-6 py-3">
-                        <div className="font-medium text-gray-900">{v.planta?.nombre}</div>
+                        <div className="font-medium text-gray-900">{v.esArregloCombinado ? 'Arreglo Combinado' : v.planta?.nombre}</div>
                         <div className="text-xs text-gray-500">{v.presentacion?.nombre}</div>
                       </td>
                       <td className="px-6 py-3">

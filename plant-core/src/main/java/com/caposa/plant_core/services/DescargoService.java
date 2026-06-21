@@ -17,6 +17,9 @@ public class DescargoService {
 
     @Transactional
     public Descargo registrarDescargo(Descargo nuevoDescargo) {
+        if (nuevoDescargo.getCantidad() == null || nuevoDescargo.getCantidad() <= 0) {
+            throw new IllegalArgumentException("La cantidad debe ser mayor a 0.");
+        }
         Descargo descargoGuardado = descargoRepo.save(nuevoDescargo);
 
         Long idInventario = descargoGuardado.getPlantaPresentacion().getId();

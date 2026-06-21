@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/bitacora")
@@ -31,7 +32,8 @@ public class BitacoraController {
             dto.setTipo("Producción");
             dto.setFecha(p.getFecha());
             dto.setEmpleado(p.getTrabajador().getNombre() + " " + p.getTrabajador().getApellido());
-            dto.setDetalle("Siembra de: [" + p.getPlantaPresentacion().getCodigo() + "] - Origen: " + p.getOrigen().getNombre());
+            String origenesNombres = p.getOrigenes().stream().map(Origen::getNombre).collect(Collectors.joining(", "));
+            dto.setDetalle("Siembra de: [" + p.getPlantaPresentacion().getCodigo() + "] - Orígenes: " + origenesNombres);
             dto.setCantidad(p.getCantidad());
             dto.setFechaRegistro(p.getCreatedAt());
             historial.add(dto);
@@ -39,15 +41,32 @@ public class BitacoraController {
 
         // 2. Trasplantes (Cambios)
         for (CambioPresentacion c : cambioRepo.findAll()) {
-            MovimientoDTO dto = new MovimientoDTO();
-            dto.setIdOperacion("TRAS-" + c.getId());
-            dto.setTipo("Trasplante");
-            dto.setFecha(c.getFecha());
-            dto.setEmpleado(c.getTrabajador().getNombre() + " " + c.getTrabajador().getApellido());
-            dto.setDetalle("De: [" + c.getOrigen().getCodigo() + "] hacia: [" + c.getDestino().getCodigo() + "]");
-            dto.setCantidad(c.getCantidad());
-            dto.setFechaRegistro(c.getCreatedAt());
-            historial.add(dto);
+            if (c.getDetalles() != null && !c.getDetalles().isEmpty()) {
+                for (com.caposa.plant_core.models.CambioPresentacionDetalle det : c.getDetalles()) {
+                    MovimientoDTO dto = new MovimientoDTO();
+                    dto.setIdOperacion("TRAS-" + c.getId() + "-" + det.getId());
+                    dto.setTipo("Cambio Presentación");
+                    dto.setFecha(c.getFecha());
+                    dto.setEmpleado(c.getTrabajador().getNombre() + " " + c.getTrabajador().getApellido());
+                    dto.setDetalle("De: [" + det.getOrigen().getCodigo() + "] (" + det.getCantidadOrigen() + ") hacia: [" + c.getDestino().getCodigo() + "]");
+                    // En la bitácora simplificada (UI) ponemos la cantidad que salió de la planta origen o destino?
+                    // Mejor mostramos la cantidad final generada si es la primera fila, o simplemente referimos al destino
+                    dto.setCantidad(c.getCantidadDestino());
+                    dto.setFechaRegistro(c.getCreatedAt());
+                    historial.add(dto);
+                }
+            } else {
+                // Fallback por si hay un registro viejo sin detalles (migración)
+                MovimientoDTO dto = new MovimientoDTO();
+                dto.setIdOperacion("TRAS-" + c.getId());
+                dto.setTipo("Cambio Presentación");
+                dto.setFecha(c.getFecha());
+                dto.setEmpleado(c.getTrabajador().getNombre() + " " + c.getTrabajador().getApellido());
+                dto.setDetalle("Hacia: [" + c.getDestino().getCodigo() + "]");
+                dto.setCantidad(c.getCantidadDestino());
+                dto.setFechaRegistro(c.getCreatedAt());
+                historial.add(dto);
+            }
         }
 
         // 3. Descargos
@@ -80,5 +99,23 @@ public class BitacoraController {
         historial.sort(Comparator.comparing(MovimientoDTO::getFechaRegistro, Comparator.nullsLast(Comparator.reverseOrder())));
 
         return historial;
+    }
+
+    @Autowired private com.caposa.plant_core.services.ExcelExportService excelExportService;
+
+    @GetMapping("/exportar")
+    public org.springframework.http.ResponseEntity<byte[]> exportarExcel() {
+        try {
+            byte[] excelContent = excelExportService.exportarBitacora();
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentDispositionFormData("attachment", "bitacora.xlsx");
+            headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+            return new org.springframework.http.ResponseEntity<>(excelContent, headers, org.springframework.http.HttpStatus.OK);
+        } catch (java.io.IOException e) {
+            return new org.springframework.http.ResponseEntity<>(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

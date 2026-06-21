@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @RestController
 @RequestMapping("/api/origenes")
@@ -55,8 +56,12 @@ public class OrigenController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminar(@PathVariable Long id) {
         return origenRepo.findById(id).map(origen -> {
-            origenRepo.delete(origen);
-            return ResponseEntity.ok().build();
+            try {
+                origenRepo.delete(origen);
+                return ResponseEntity.ok().build();
+            } catch (DataIntegrityViolationException e) {
+                return ResponseEntity.badRequest().body("No se puede eliminar este registro porque ya está asociado a operaciones históricas.");
+            }
         }).orElse(ResponseEntity.notFound().build());
     }
 }

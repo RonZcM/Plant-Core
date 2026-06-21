@@ -17,6 +17,9 @@ public class EntradaExteriorService {
 
     @Transactional
     public EntradaExterior registrarEntrada(EntradaExterior nuevaEntrada) {
+        if (nuevaEntrada.getCantidad() == null || nuevaEntrada.getCantidad() <= 0) {
+            throw new IllegalArgumentException("La cantidad debe ser mayor a 0.");
+        }
         EntradaExterior guardada = entradaRepo.save(nuevaEntrada);
 
         // Extraemos el ID del vínculo de inventario y la cantidad a sumar

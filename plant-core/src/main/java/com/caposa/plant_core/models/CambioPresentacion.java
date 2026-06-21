@@ -1,10 +1,10 @@
 package com.caposa.plant_core.models;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "cambio_presentacion")
@@ -20,26 +20,24 @@ public class CambioPresentacion extends Auditable {
     private Empleado trabajador;
 
     @ManyToOne
-    @JoinColumn(name = "planta_presentacion_origen_id", nullable = false)
-    private PlantaPresentacion origen;
-
-    @ManyToOne
     @JoinColumn(name = "planta_presentacion_destino_id", nullable = false)
     private PlantaPresentacion destino;
 
-    private Integer cantidad;
+    @Column(name = "cantidad_destino")
+    private Integer cantidadDestino;
 
+    @OneToMany(mappedBy = "cambioPresentacion", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<CambioPresentacionDetalle> detalles = new ArrayList<>();
 
     public CambioPresentacion() {
     }
 
-    public CambioPresentacion(Long id, LocalDate fecha, Empleado trabajador, PlantaPresentacion origen, PlantaPresentacion destino, Integer cantidad, LocalDateTime crbyat, LocalDateTime upbyat) {
+    public CambioPresentacion(Long id, LocalDate fecha, Empleado trabajador, PlantaPresentacion destino, Integer cantidadDestino) {
         this.id = id;
         this.fecha = fecha;
         this.trabajador = trabajador;
-        this.origen = origen;
         this.destino = destino;
-        this.cantidad = cantidad;
+        this.cantidadDestino = cantidadDestino;
     }
 
     public Long getId() {
@@ -66,14 +64,6 @@ public class CambioPresentacion extends Auditable {
         this.trabajador = trabajador;
     }
 
-    public PlantaPresentacion getOrigen() {
-        return origen;
-    }
-
-    public void setOrigen(PlantaPresentacion origen) {
-        this.origen = origen;
-    }
-
     public PlantaPresentacion getDestino() {
         return destino;
     }
@@ -82,12 +72,29 @@ public class CambioPresentacion extends Auditable {
         this.destino = destino;
     }
 
-    public Integer getCantidad() {
-        return cantidad;
+    public Integer getCantidadDestino() {
+        return cantidadDestino;
     }
 
-    public void setCantidad(Integer cantidad) {
-        this.cantidad = cantidad;
+    public void setCantidadDestino(Integer cantidadDestino) {
+        this.cantidadDestino = cantidadDestino;
     }
 
+    public List<CambioPresentacionDetalle> getDetalles() {
+        return detalles;
+    }
+
+    public void setDetalles(List<CambioPresentacionDetalle> detalles) {
+        this.detalles = detalles;
+    }
+
+    public void addDetalle(CambioPresentacionDetalle detalle) {
+        detalles.add(detalle);
+        detalle.setCambioPresentacion(this);
+    }
+    
+    public void removeDetalle(CambioPresentacionDetalle detalle) {
+        detalles.remove(detalle);
+        detalle.setCambioPresentacion(null);
+    }
 }

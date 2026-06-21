@@ -24,7 +24,7 @@ public class PlantaPresentacionController {
     @PostMapping
     public ResponseEntity<?> registrar(@RequestBody PlantaPresentacion pp) {
         try {
-            if (inventarioRepo.existsByPlantaIdAndPresentacionId(pp.getPlanta().getId(), pp.getPresentacion().getId())) {
+            if (pp.getPlanta() != null && inventarioRepo.existsByPlantaIdAndPresentacionId(pp.getPlanta().getId(), pp.getPresentacion().getId())) {
                 return ResponseEntity.badRequest().body("Este vínculo ya existe.");
             }
             if (pp.getCodigo() != null && inventarioRepo.existsByCodigo(pp.getCodigo())) {

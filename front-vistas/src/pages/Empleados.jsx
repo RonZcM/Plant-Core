@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
+import toast from 'react-hot-toast';
 
 export default function Empleados() {
   const [empleados, setEmpleados] = useState([]);
@@ -35,9 +36,9 @@ export default function Empleados() {
       cargarEmpleados();
     } catch (error) {
       if (error.response && error.response.data) {
-        alert(error.response.data);
+        toast.error(error.response.data);
       } else {
-        alert("Error al guardar empleado.");
+        toast.error("Error al guardar empleado.");
       }
     }
   };
@@ -59,8 +60,9 @@ export default function Empleados() {
     if (window.confirm("¿Estás seguro de eliminar este registro?")) {
       try {
         await api.delete(`/empleados/${id}`);
+        toast.success("Empleado eliminado con éxito.");
         cargarEmpleados();
-      } catch (error) { alert("Error al eliminar. Posiblemente tenga operaciones asignadas."); }
+      } catch (error) { toast.error(error.response?.data || "Error al eliminar. Posiblemente tenga operaciones asignadas."); }
     }
   };
 

@@ -86,7 +86,7 @@ export default function Inventario() {
                       {item.codigo}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900">{item.planta?.nombre}</div>
+                      <div className="font-bold text-gray-900">{item.esArregloCombinado ? 'Arreglo Combinado' : item.planta?.nombre}</div>
                       <div className="text-xs text-gray-500 italic">{item.planta?.nombreCientifico}</div>
                     </td>
                     <td className="px-6 py-4">

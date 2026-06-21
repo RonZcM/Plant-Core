@@ -56,7 +56,8 @@ plantas{
 
 planta_presentacion{
   id (BIGINT, PK)
-  planta_id (BIGINT, FK a plantas.id)
+  planta_id (BIGINT, FK a plantas.id, NULLABLE) // Puede ser null si es un arreglo combinado
+  es_arreglo_combinado (BOOLEAN) // Indica si es una mezcla de plantas
   presentacion_id (BIGINT, FK a presentaciones.id)
   codigo (VARCHAR(20)) // Código único de inventario. Ejemplo: PQCA01001
   detalle (VARCHAR(255)) // Descripción estática o información complementaria.
@@ -71,38 +72,33 @@ produccion{
   fecha (DATE)
   trabajador_id (BIGINT, FK a empleados.id)
   planta_presentacion_id (BIGINT, FK a planta_presentacion.id)
-  origen_id (BIGINT, FK a origen.id) // Reemplaza al VARCHAR de texto libre
   cantidad (INT) // Cantidad producida que se agregará al stock de planta_presentacion
   siembra_tiempo_horas (INT) // Tiempo empleado en horas (Ejemplo: 2)
   crbyat (TIMESTAMP)
   upbyat (TIMESTAMP)
+}
 
-  // CAMPOS DE REFERENCIA PARA JOINS:
-  // nombre_planta (JOIN por medio de planta_presentacion.planta_id -> plantas.nombre)
-  // presentacion (JOIN por medio de planta_presentacion.presentacion_id -> presentaciones.nombre)
-  // origen_planta (JOIN por medio de origen_id -> origen.nombre)
-  // material_utilizado (JOIN por medio de presentaciones.cc)
-  // codigo (JOIN por medio de planta_presentacion.codigo)
-  // requisicion (JOIN por medio de presentaciones.requisicion)
+produccion_origen{
+  produccion_id (BIGINT, FK a produccion.id)
+  origen_id (BIGINT, FK a origen.id)
+  // Tabla intermedia para relación N:M
 }
 
 cambio_presentacion{
   id (BIGINT, PK)
   fecha (DATE)
   trabajador_id (BIGINT, FK a empleados.id)
-  planta_presentacion_origen_id (BIGINT, FK a planta_presentacion.id)
   planta_presentacion_destino_id (BIGINT, FK a planta_presentacion.id)
-  cantidad (INT) // Se descuenta del origen y se suma al destino
+  cantidad_destino (INT) // Se suma al destino
   crbyat (TIMESTAMP)
   upbyat (TIMESTAMP)
+}
 
-  // CAMPOS DE REFERENCIA PARA JOINS:
-  // codigo_antiguo (JOIN por medio de planta_presentacion_origen_id -> planta_presentacion.codigo)
-  // codigo_nuevo (JOIN por medio de planta_presentacion_destino_id -> planta_presentacion.codigo)
-  // nombre_planta (JOIN por medio de planta_presentacion.planta_id -> plantas.nombre)
-  // presentacion_vieja (JOIN por medio de planta_presentacion_origen_id -> presentaciones.nombre)
-  // presentacion_nueva (JOIN por medio de planta_presentacion_destino_id -> presentaciones.nombre)
-  // requisicion (JOIN por medio de presentaciones.requisicion)
+cambio_presentacion_detalle{
+  id (BIGINT, PK)
+  cambio_presentacion_id (BIGINT, FK a cambio_presentacion.id)
+  planta_presentacion_origen_id (BIGINT, FK a planta_presentacion.id)
+  cantidad_origen (INT) // Se descuenta del origen
 }
 
 descargo{

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @RestController
 @RequestMapping("/api/empleados")
@@ -58,8 +59,12 @@ public class EmpleadoController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminar(@PathVariable Long id) {
         return empleadoRepo.findById(id).map(emp -> {
-            empleadoRepo.delete(emp);
-            return ResponseEntity.ok().build();
+            try {
+                empleadoRepo.delete(emp);
+                return ResponseEntity.ok().build();
+            } catch (DataIntegrityViolationException e) {
+                return ResponseEntity.badRequest().body("No se puede eliminar este empleado porque ya está asociado a operaciones históricas.");
+            }
         }).orElse(ResponseEntity.notFound().build());
     }
 }

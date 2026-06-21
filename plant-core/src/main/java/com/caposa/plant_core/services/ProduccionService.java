@@ -17,6 +17,9 @@ public class ProduccionService {
 
     @Transactional
     public Produccion registrarProduccion(Produccion nuevaProduccion) {
+        if (nuevaProduccion.getCantidad() == null || nuevaProduccion.getCantidad() <= 0) {
+            throw new IllegalArgumentException("La cantidad debe ser mayor a 0.");
+        }
         Produccion produccionGuardada = produccionRepo.save(nuevaProduccion);
 
         // Extraemos solo el ID maestro del inventario

@@ -22,10 +22,13 @@ public class Produccion extends Auditable {
     @JoinColumn(name = "planta_presentacion_id", nullable = false)
     private PlantaPresentacion plantaPresentacion;
 
-    // AQUI ESTÁ EL CAMBIO CLAVE: Relación con la tabla Origen
-    @ManyToOne
-    @JoinColumn(name = "origen_id", nullable = false)
-    private Origen origen;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "produccion_origen",
+        joinColumns = @JoinColumn(name = "produccion_id"),
+        inverseJoinColumns = @JoinColumn(name = "origen_id")
+    )
+    private java.util.Set<Origen> origenes;
 
     @Column(nullable = false)
     private Integer cantidad;
@@ -42,8 +45,8 @@ public class Produccion extends Auditable {
     public void setTrabajador(Empleado trabajador) { this.trabajador = trabajador; }
     public PlantaPresentacion getPlantaPresentacion() { return plantaPresentacion; }
     public void setPlantaPresentacion(PlantaPresentacion plantaPresentacion) { this.plantaPresentacion = plantaPresentacion; }
-    public Origen getOrigen() { return origen; }
-    public void setOrigen(Origen origen) { this.origen = origen; }
+    public java.util.Set<Origen> getOrigenes() { return origenes; }
+    public void setOrigenes(java.util.Set<Origen> origenes) { this.origenes = origenes; }
     public Integer getCantidad() { return cantidad; }
     public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
     public Double getSiembraTiempoHoras() { return siembraTiempoHoras; }
