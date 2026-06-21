@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant-Core | Catálogo de Vivero</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2e8b57;
+            --secondary-color: #e8f5e9;
+            --text-dark: #333;
+            --text-light: #666;
+            --white: #ffffff;
+            --shadow: 0 10px 20px rgba(0,0,0,0.08);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: #f9fbf9;
+            color: var(--text-dark);
+        }
+
+        /* Header y Hero */
+        header {
+            background-color: var(--primary-color);
+            color: var(--white);
+            padding: 2rem 5%;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .hero {
+            padding: 4rem 5%;
+            text-align: center;
+            background: linear-gradient(to bottom, var(--secondary-color), transparent);
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .hero p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Catálogo Grid */
+        .catalog-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 5%;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2.5rem;
+        }
+
+        /* Tarjeta de Producto */
+        .card {
+            background: var(--white);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(46, 139, 87, 0.2);
+        }
+
+        .image-container {
+            width: 100%;
+            height: 250px;
+            overflow: hidden;
+        }
+
+        .card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: var(--transition);
+        }
+
+        .card:hover img {
+            transform: scale(1.05);
+        }
+
+        .badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--primary-color);
+            color: var(--white);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-description {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+
+        .price {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: var(--white);
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .btn:hover {
+            background-color: #1e633d;
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--text-dark);
+            color: var(--white);
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>🪴 Plant-Core</h2>
+    </header>
+
+    <section class="hero">
+        <h1>Descubre la Naturaleza</h1>
+        <p>Explora nuestro catálogo cuidadosamente seleccionado. Plantas de interior, exterior y cuidados especializados para dar vida a tus espacios.</p>
+    </section>
+
+    <main class="catalog-container">
+        <div class="grid">
+            <article class="card">
+                <span class="badge">Popular</span>
+                <div class="image-container">
+                    <img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Monstera Deliciosa">
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Monstera Deliciosa</h3>
+                    <p class="card-description">Perfecta para interiores. Sus grandes hojas agujereadas le darán un toque tropical a cualquier habitación.</p>
+                    <div class="card-footer">
+                        <span class="price">$24.99</span>
+                        <button class="btn">Añadir</button>
+                    </div>
+                </div>
+            </article>
+
+            <article class="card">
+                <div class="image-container">
+                    <img src="https://images.unsplash.com/photo-1512428813834-c702c7702b78?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Suculenta Echeveria">
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Suculenta Echeveria</h3>
+                    <p class="card-description">Requiere poco mantenimiento y agua. Ideal para escritorios y amantes de la decoración minimalista.</p>
+                    <div class="card-footer">
+                        <span class="price">$8.50</span>
+                        <button class="btn">Añadir</button>
+                    </div>
+                </div>
+            </article>
+
+            <article class="card">
+                <span class="badge" style="background-color: #ff9800;">Oferta</span>
+                <div class="image-container">
+                    <img src="https://images.unsplash.com/photo-1485955900006-10f4d324d411?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Palma Areca">
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Palma Areca</h3>
+                    <p class="card-description">Una excelente purificadora de aire. Aporta gran volumen y frescura a pasillos y salas de estar.</p>
+                    <div class="card-footer">
+                        <span class="price">$35.00</span>
+                        <button class="btn">Añadir</button>
+                    </div>
+                </div>
+            </article>
+
+            <article class="card">
+                <div class="image-container">
+                    <img src="https://images.unsplash.com/photo-1597055181300-e3623ddfaac2?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Ficus Lyrata">
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Ficus Lyrata</h3>
+                    <p class="card-description">Conocida como 'Higuera hoja de violín'. Una planta elegante y estilizada que domina cualquier rincón.</p>
+                    <div class="card-footer">
+                        <span class="price">$42.00</span>
+                        <button class="btn">Añadir</button>
+                    </div>
+                </div>
+            </article>
+            
+            <article class="card">
+                <div class="image-container">
+                    <img src="https://images.unsplash.com/photo-1600607686527-6fb886090705?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Calathea">
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Calathea Ornata</h3>
+                    <p class="card-description">Destaca por sus hojas vibrantes con patrones únicos. Prefiere la luz indirecta y la humedad.</p>
+                    <div class="card-footer">
+                        <span class="price">$18.75</span>
+                        <button class="btn">Añadir</button>
+                    </div>
+                </div>
+            </article>
+
+            <article class="card">
+                <div class="image-container">
+                    <img src="https://images.unsplash.com/photo-1509423350716-97f9360b4e09?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Cactus San Pedro">
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Cactus Saguaro Mini</h3>
+                    <p class="card-description">Un clásico del desierto en miniatura. Prácticamente indestructible y perfecto para terrazas con mucho sol.</p>
+                    <div class="card-footer">
+                        <span class="price">$12.00</span>
+                        <button class="btn">Añadir</button>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Sistema Integral Plant-Core. Todos los derechos reservados.</p>
+    </footer>
+
+</body>
+</html>

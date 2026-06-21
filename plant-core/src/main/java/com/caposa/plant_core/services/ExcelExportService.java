@@ -21,20 +21,23 @@ public class ExcelExportService {
     @Autowired private CambioPresentacionRepository cambioRepo;
     @Autowired private DescargoRepository descargoRepo;
     @Autowired private EntradaExteriorRepository entradaRepo;
+    @Autowired private CampoRepository campoRepo;
     @Autowired private PresentacionRepository presentacionRepo;
 
-    public byte[] exportarBitacora() throws IOException {
+    public byte[] exportarBitacora(LocalDate startDate, LocalDate endDate) throws IOException {
         try (Workbook workbook = new XSSFWorkbook()) {
-            List<Produccion> producciones = produccionRepo.findAll();
-            List<CambioPresentacion> cambios = cambioRepo.findAll();
-            List<Descargo> descargos = descargoRepo.findAll();
-            List<EntradaExterior> entradas = entradaRepo.findAll();
+            List<Produccion> producciones = produccionRepo.findAll().stream().filter(p -> !p.getFecha().isBefore(startDate) && !p.getFecha().isAfter(endDate)).collect(Collectors.toList());
+            List<CambioPresentacion> cambios = cambioRepo.findAll().stream().filter(c -> !c.getFecha().isBefore(startDate) && !c.getFecha().isAfter(endDate)).collect(Collectors.toList());
+            List<Descargo> descargos = descargoRepo.findAll().stream().filter(d -> !d.getFecha().isBefore(startDate) && !d.getFecha().isAfter(endDate)).collect(Collectors.toList());
+            List<EntradaExterior> entradas = entradaRepo.findAll().stream().filter(e -> !e.getFecha().isBefore(startDate) && !e.getFecha().isAfter(endDate)).collect(Collectors.toList());
+            List<Campo> campos = campoRepo.findAll().stream().filter(c -> !c.getFecha().isBefore(startDate) && !c.getFecha().isAfter(endDate)).collect(Collectors.toList());
             List<Presentacion> presentaciones = presentacionRepo.findAll();
 
-            crearHojaBitacora(workbook, producciones, cambios, descargos, entradas);
+            crearHojaBitacora(workbook, producciones, cambios, descargos, entradas, campos, startDate, endDate);
             crearHojaProduccion(workbook, producciones);
             crearHojaDescargo(workbook, descargos);
             crearHojaCambio(workbook, cambios);
+            crearHojaCampo(workbook, campos);
             crearHojaEntradaExterior(workbook, entradas);
             crearHojaConstantes(workbook, presentaciones);
 
@@ -92,12 +95,12 @@ public class ExcelExportService {
         style.setBorderRight(BorderStyle.THIN);
     }
 
-    private void crearHojaBitacora(Workbook workbook, List<Produccion> producciones, List<CambioPresentacion> cambios, List<Descargo> descargos, List<EntradaExterior> entradas) {
+    private void crearHojaBitacora(Workbook workbook, List<Produccion> producciones, List<CambioPresentacion> cambios, List<Descargo> descargos, List<EntradaExterior> entradas, List<Campo> campos, LocalDate startDate, LocalDate endDate) {
         Sheet sheet = workbook.createSheet("Bitácora");
         sheet.createFreezePane(0, 4);
 
         boolean hasProd = !producciones.isEmpty();
-        boolean hasSiembra = false; // Siempre oculto si no hay registros
+        boolean hasSiembra = !campos.isEmpty();
         boolean hasCambio = !cambios.isEmpty();
         boolean hasEntrada = !entradas.isEmpty();
         boolean hasDescargo = !descargos.isEmpty();
@@ -113,11 +116,11 @@ public class ExcelExportService {
         int cambioStart = -1, cambioEnd = -1;
         if (hasCambio) { cambioStart = colIndex; cambioEnd = colIndex + 2; colIndex += 3; }
         
+        int descargoStart = -1, descargoEnd = -1;
+        if (hasDescargo) { descargoStart = colIndex; descargoEnd = colIndex + 1; colIndex += 2; }
+        
         int entradaStart = -1, entradaEnd = -1;
         if (hasEntrada) { entradaStart = colIndex; entradaEnd = colIndex + 2; colIndex += 3; }
-        
-        int descargoStart = -1, descargoEnd = -1;
-        if (hasDescargo) { descargoStart = colIndex; descargoEnd = colIndex; colIndex += 1; }
 
         int finalDatosStart = colIndex;
         int finalDatosEnd = colIndex + 2;
@@ -162,8 +165,16 @@ public class ExcelExportService {
         Row row1 = sheet.createRow(1);
         Cell cVivero = row1.createCell(0); cVivero.setCellValue("VIVERO SONSONATE"); cVivero.setCellStyle(styleInfo);
         Cell cEncargado = row1.createCell(3); cEncargado.setCellValue("ENCARGADO: Generado por Sistema"); cEncargado.setCellStyle(styleInfo);
-        Cell cMes = row1.createCell(finalDatosStart - 2); cMes.setCellValue("Mes: " + LocalDate.now().getMonth().name()); cMes.setCellStyle(styleInfo);
-        Cell cAno = row1.createCell(finalDatosStart + 1); cAno.setCellValue("AÑO: " + LocalDate.now().getYear()); cAno.setCellStyle(styleInfo);
+        
+        // Colocar "SUPERVISA" entre Encargado y Mes. Si finalDatosStart - 5 es > 3, usarlo, sino ponerlo a la derecha de Encargado.
+        int supervCol = Math.max(4, finalDatosStart - 5);
+        Cell cSupervisa = row1.createCell(supervCol); cSupervisa.setCellValue("SUPERVISA: Douglas López"); cSupervisa.setCellStyle(styleInfo);
+        
+        String mesEsp = startDate.getMonth().getDisplayName(java.time.format.TextStyle.FULL, new java.util.Locale("es", "ES"));
+        mesEsp = mesEsp.substring(0, 1).toUpperCase() + mesEsp.substring(1).toLowerCase();
+        
+        Cell cMes = row1.createCell(finalDatosStart - 2); cMes.setCellValue("Mes: " + mesEsp); cMes.setCellStyle(styleInfo);
+        Cell cAno = row1.createCell(finalDatosStart + 1); cAno.setCellValue("AÑO: " + startDate.getYear()); cAno.setCellStyle(styleInfo);
 
         // Fila 2 y 3: Grupos y Cabeceras
         Row row2 = sheet.createRow(2);
@@ -235,9 +246,13 @@ public class ExcelExportService {
 
         // Descargo
         if (hasDescargo) {
-            row2.createCell(descargoStart).setCellValue("Descargo de plantas"); row2.getCell(descargoStart).setCellStyle(styleDescargoGrp);
-            Cell c = row3.createCell(descargoStart); c.setCellStyle(styleDescargo);
-            row3.getCell(descargoStart).setCellValue("Descargo de plantas (Motivo)"); sheet.setColumnWidth(descargoStart, 6000);
+            for(int i=descargoStart; i<=descargoEnd; i++) {
+                row2.createCell(i).setCellValue("Descargo de plantas"); row2.getCell(i).setCellStyle(styleDescargoGrp);
+                Cell c = row3.createCell(i); c.setCellStyle(styleDescargo);
+            }
+            sheet.addMergedRegion(new CellRangeAddress(2, 2, descargoStart, descargoEnd));
+            row3.getCell(descargoStart).setCellValue("Descargo de plantas"); sheet.setColumnWidth(descargoStart, 6000);
+            row3.getCell(descargoStart+1).setCellValue("Motivo de descargo"); sheet.setColumnWidth(descargoStart+1, 6000);
         }
 
         // Final Datos
@@ -259,10 +274,11 @@ public class ExcelExportService {
         CellStyle styleDate = createDateStyle(workbook);
 
         List<MovimientoResumen> todos = new ArrayList<>();
-        for (Produccion p : producciones) todos.add(new MovimientoResumen("produccion", p.getFecha(), p.getTrabajador().getNombre(), p.getCantidad(), p));
-        for (CambioPresentacion c : cambios) todos.add(new MovimientoResumen("cambio", c.getFecha(), c.getTrabajador().getNombre(), c.getCantidadDestino(), c));
-        for (Descargo d : descargos) todos.add(new MovimientoResumen("descargo", d.getFecha(), d.getTrabajador().getNombre(), d.getCantidad(), d));
-        for (EntradaExterior e : entradas) todos.add(new MovimientoResumen("entrada", e.getFecha(), e.getTrabajador().getNombre(), e.getCantidad(), e));
+        for (Produccion p : producciones) todos.add(new MovimientoResumen("produccion", p.getFecha(), p.getTrabajadores() != null ? p.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "", p.getCantidad(), p));
+        for (CambioPresentacion c : cambios) todos.add(new MovimientoResumen("cambio", c.getFecha(), c.getTrabajadores() != null ? c.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "", c.getCantidadDestino(), c));
+        for (Descargo d : descargos) todos.add(new MovimientoResumen("descargo", d.getFecha(), d.getTrabajadores() != null ? d.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "", d.getCantidad(), d));
+        for (EntradaExterior e : entradas) todos.add(new MovimientoResumen("entrada", e.getFecha(), e.getTrabajadores() != null ? e.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "", e.getCantidad(), e));
+        for (Campo ca : campos) todos.add(new MovimientoResumen("campo", ca.getFecha(), ca.getTrabajadores() != null ? ca.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "", ca.getCantidad(), ca));
 
         todos.sort(Comparator.comparing(MovimientoResumen::getFecha).reversed());
 
@@ -328,9 +344,29 @@ public class ExcelExportService {
                 row.getCell(finalDatosStart+1).setCellValue(e.getPlantaPresentacion().getPresentacion().getRequisicion() != null ? e.getPlantaPresentacion().getPresentacion().getRequisicion().toString() : "");
             } else if (mov.getTipo().equals("descargo") && hasDescargo) {
                 Descargo d = (Descargo) mov.getEntidad();
-                row.getCell(descargoStart).setCellValue(d.getMotivoDescargo());
+                String np = d.getPlantaPresentacion().getPlanta() != null ? d.getPlantaPresentacion().getPlanta().getNombre() : "Arreglo Combinado";
+                boolean hasDetalle = d.getPlantaPresentacion().getDetalle() != null && !d.getPlantaPresentacion().getDetalle().isEmpty();
+                boolean hasTamanio = d.getPlantaPresentacion().getTamanio() != null && !d.getPlantaPresentacion().getTamanio().isEmpty();
+                if (hasDetalle) np += " " + d.getPlantaPresentacion().getDetalle();
+                if (hasDetalle && hasTamanio) np += " de " + d.getPlantaPresentacion().getTamanio();
+                else if (hasTamanio) np += " " + d.getPlantaPresentacion().getTamanio();
+                np += " " + d.getPlantaPresentacion().getPresentacion().getNombre();
+                
+                row.getCell(descargoStart).setCellValue(np);
+                row.getCell(descargoStart+1).setCellValue(d.getMotivoDescargo());
                 row.getCell(finalDatosStart).setCellValue(d.getPlantaPresentacion().getCodigo());
                 row.getCell(finalDatosStart+1).setCellValue(d.getPlantaPresentacion().getPresentacion().getRequisicion() != null ? d.getPlantaPresentacion().getPresentacion().getRequisicion().toString() : "");
+            } else if (mov.getTipo().equals("campo") && hasSiembra) {
+                Campo ca = (Campo) mov.getEntidad();
+                String np = ca.getPlantaPresentacion().getPlanta() != null ? ca.getPlantaPresentacion().getPlanta().getNombre() : "Arreglo Combinado";
+                np += " " + ca.getPlantaPresentacion().getPresentacion().getNombre();
+                
+                String tipoC = (ca.getTipo().equals("Salida") ? "Siembra-" : "Sacar-") + np;
+                String lugares = ca.getLugares().stream().map(Origen::getNombre).collect(Collectors.joining(", "));
+                row.getCell(siembraStart).setCellValue(tipoC);
+                row.getCell(siembraStart+1).setCellValue(lugares);
+                row.getCell(finalDatosStart).setCellValue(ca.getPlantaPresentacion().getCodigo());
+                row.getCell(finalDatosStart+1).setCellValue(ca.getPlantaPresentacion().getPresentacion().getRequisicion() != null ? ca.getPlantaPresentacion().getPresentacion().getRequisicion().toString() : "");
             }
         }
     }
@@ -368,7 +404,7 @@ public class ExcelExportService {
             for(int i=0;i<headers.length;i++) row.createCell(i).setCellStyle(styleDataWrap);
             
             if (p.getFecha() != null) { Cell d = row.getCell(0); d.setCellValue(p.getFecha()); d.setCellStyle(styleDate); }
-            row.getCell(1).setCellValue(p.getTrabajador().getNombre());
+            row.getCell(1).setCellValue(p.getTrabajadores() != null ? p.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "");
             row.getCell(2).setCellValue(p.getPlantaPresentacion().getCodigo());
             row.getCell(3).setCellValue(p.getCantidad());
             String np = p.getPlantaPresentacion().getPlanta() != null ? p.getPlantaPresentacion().getPlanta().getNombre() : "Arreglo Combinado";
@@ -396,41 +432,60 @@ public class ExcelExportService {
 
     private void crearHojaDescargo(Workbook workbook, List<Descargo> descargos) {
         Sheet sheet = workbook.createSheet("Descargo");
-        sheet.createFreezePane(0, 1);
+        sheet.createFreezePane(0, 2);
+        
+        CellStyle styleTitle = workbook.createCellStyle();
+        Font fontTitle = workbook.createFont(); fontTitle.setBold(true); styleTitle.setFont(fontTitle);
+        
         CellStyle headerStyle = createHeaderStyle(workbook, IndexedColors.GREY_50_PERCENT, true);
         CellStyle styleDataWrap = createDataStyle(workbook, true);
         CellStyle styleDate = createDateStyle(workbook);
 
-        Row header = sheet.createRow(0);
-        String[] headers = {"Fecha", "Trabajador", "Cant.", "Motivo de descargo", "Código"};
+        Row title = sheet.createRow(0); 
+        Cell tc = title.createCell(0); 
+        tc.setCellValue("DESCARGO DE MERCADO LOCAL"); 
+        tc.setCellStyle(styleTitle);
+
+        Row header = sheet.createRow(1);
+        String[] headers = {"Fecha", "Trabajador", "Cantidad", "Descargo de plantas", "Motivo de descargo", "Código"};
         for (int i=0; i<headers.length; i++) {
             Cell c = header.createCell(i); c.setCellValue(headers[i]); c.setCellStyle(headerStyle);
             if (i == 0) sheet.setColumnWidth(i, 1800);
             else if (i == 1) sheet.setColumnWidth(i, 2800);
             else if (i == 2) sheet.setColumnWidth(i, 1600);
             else if (i == 3) sheet.setColumnWidth(i, 6000);
-            else if (i == 7) sheet.setColumnWidth(i, 2000);
+            else if (i == 4) sheet.setColumnWidth(i, 6000);
             else sheet.setColumnWidth(i, 3500);
         }
 
         if (descargos.isEmpty()) {
-            Row row = sheet.createRow(1);
+            Row row = sheet.createRow(2);
             Cell c = row.createCell(0); c.setCellValue("No hubo descargos registrados."); c.setCellStyle(styleDataWrap);
             for(int i=1;i<headers.length;i++) row.createCell(i).setCellStyle(styleDataWrap);
-            sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, headers.length - 1));
+            sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, headers.length - 1));
             return;
         }
 
-        int rowNum = 1;
+        int rowNum = 2;
         for (Descargo d : descargos) {
             Row row = sheet.createRow(rowNum++);
             for(int i=0;i<headers.length;i++) row.createCell(i).setCellStyle(styleDataWrap);
             
             if (d.getFecha() != null) { Cell dc = row.getCell(0); dc.setCellValue(d.getFecha()); dc.setCellStyle(styleDate); }
-            row.getCell(1).setCellValue(d.getTrabajador().getNombre());
+            row.getCell(1).setCellValue(d.getTrabajadores() != null ? d.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "");
             row.getCell(2).setCellValue(d.getCantidad());
-            row.getCell(3).setCellValue(d.getMotivoDescargo());
-            row.getCell(4).setCellValue(d.getPlantaPresentacion().getCodigo());
+            
+            String np = d.getPlantaPresentacion().getPlanta() != null ? d.getPlantaPresentacion().getPlanta().getNombre() : "Arreglo Combinado";
+            boolean hasDetalle = d.getPlantaPresentacion().getDetalle() != null && !d.getPlantaPresentacion().getDetalle().isEmpty();
+            boolean hasTamanio = d.getPlantaPresentacion().getTamanio() != null && !d.getPlantaPresentacion().getTamanio().isEmpty();
+            if (hasDetalle) np += " " + d.getPlantaPresentacion().getDetalle();
+            if (hasDetalle && hasTamanio) np += " de " + d.getPlantaPresentacion().getTamanio();
+            else if (hasTamanio) np += " " + d.getPlantaPresentacion().getTamanio();
+            np += " " + d.getPlantaPresentacion().getPresentacion().getNombre();
+                
+            row.getCell(3).setCellValue(np);
+            row.getCell(4).setCellValue(d.getMotivoDescargo());
+            row.getCell(5).setCellValue(d.getPlantaPresentacion().getCodigo());
         }
     }
 
@@ -470,7 +525,7 @@ public class ExcelExportService {
                     for(int i=0;i<headers.length;i++) row.createCell(i).setCellStyle(styleDataWrap);
 
                     if (c.getFecha() != null) { Cell dc = row.getCell(0); dc.setCellValue(c.getFecha()); dc.setCellStyle(styleDate); }
-                    row.getCell(1).setCellValue(c.getTrabajador().getNombre());
+                    row.getCell(1).setCellValue(c.getTrabajadores() != null ? c.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "");
                     
                     if (index == c.getDetalles().size() - 1) {
                         row.getCell(2).setCellValue(c.getCantidadDestino());
@@ -483,6 +538,64 @@ public class ExcelExportService {
                     index++;
                 }
             }
+        }
+    }
+
+
+    private void crearHojaCampo(Workbook workbook, List<Campo> campos) {
+        Sheet sheet = workbook.createSheet("Campo");
+        sheet.createFreezePane(0, 2);
+        
+        CellStyle styleTitle = workbook.createCellStyle();
+        Font fontTitle = workbook.createFont(); fontTitle.setBold(true); styleTitle.setFont(fontTitle);
+        
+        CellStyle headerStyle = createHeaderStyle(workbook, IndexedColors.GREY_50_PERCENT, true);
+        CellStyle styleDataWrap = createDataStyle(workbook, true);
+        CellStyle styleDate = createDateStyle(workbook);
+
+        Row title = sheet.createRow(0); 
+        Cell tc = title.createCell(0); 
+        tc.setCellValue("SEMBRADO A CAMPO"); 
+        tc.setCellStyle(styleTitle);
+
+        Row header = sheet.createRow(1);
+        String[] headers = {"Fecha", "Trabajador", "Cantidad", "Sembrar a campo/Sacar de campo", "A campo: Lugar de siembra", "Código"};
+        for (int i=0; i<headers.length; i++) {
+            Cell c = header.createCell(i); c.setCellValue(headers[i]); c.setCellStyle(headerStyle);
+            if (i == 0) sheet.setColumnWidth(i, 1800);
+            else if (i == 1) sheet.setColumnWidth(i, 2800);
+            else if (i == 2) sheet.setColumnWidth(i, 1600);
+            else if (i == 3) sheet.setColumnWidth(i, 6000);
+            else if (i == 4) sheet.setColumnWidth(i, 6000);
+            else sheet.setColumnWidth(i, 3500);
+        }
+
+        if (campos.isEmpty()) {
+            Row row = sheet.createRow(2);
+            Cell c = row.createCell(0); c.setCellValue("No hubo operaciones de campo registradas."); c.setCellStyle(styleDataWrap);
+            for(int i=1;i<headers.length;i++) row.createCell(i).setCellStyle(styleDataWrap);
+            sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, headers.length - 1));
+            return;
+        }
+
+        int rowNum = 2;
+        for (Campo ca : campos) {
+            Row row = sheet.createRow(rowNum++);
+            for(int i=0;i<headers.length;i++) row.createCell(i).setCellStyle(styleDataWrap);
+            
+            if (ca.getFecha() != null) { Cell dc = row.getCell(0); dc.setCellValue(ca.getFecha()); dc.setCellStyle(styleDate); }
+            row.getCell(1).setCellValue(ca.getTrabajadores() != null ? ca.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "");
+            row.getCell(2).setCellValue(ca.getCantidad());
+            
+            String np = ca.getPlantaPresentacion().getPlanta() != null ? ca.getPlantaPresentacion().getPlanta().getNombre() : "Arreglo Combinado";
+            np += " " + ca.getPlantaPresentacion().getPresentacion().getNombre();
+                
+            String tipoC = (ca.getTipo().equals("Salida") ? "Siembra-" : "Sacar-") + np;
+            
+            String lugares = ca.getLugares().stream().map(Origen::getNombre).collect(Collectors.joining(", "));
+            row.getCell(3).setCellValue(tipoC);
+            row.getCell(4).setCellValue(lugares);
+            row.getCell(5).setCellValue(ca.getPlantaPresentacion().getCodigo());
         }
     }
 
@@ -519,7 +632,7 @@ public class ExcelExportService {
             for(int i=0;i<headers.length;i++) row.createCell(i).setCellStyle(styleDataWrap);
 
             if (e.getFecha() != null) { Cell dc = row.getCell(0); dc.setCellValue(e.getFecha()); dc.setCellStyle(styleDate); }
-            row.getCell(1).setCellValue(e.getTrabajador().getNombre());
+            row.getCell(1).setCellValue(e.getTrabajadores() != null ? e.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "");
             row.getCell(2).setCellValue(e.getCantidad());
             row.getCell(3).setCellValue(e.getTipo());
             row.getCell(4).setCellValue(e.getDetalle());

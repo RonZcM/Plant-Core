@@ -14,12 +14,12 @@ export default function Operaciones() {
   const hoy = new Date().toISOString().split('T')[0];
 
   // Estados de los Formularios
-  const formBase = { fecha: hoy, trabajadorId: '', plantaPresentacionId: '', cantidad: '' };
+  const formBase = { fecha: hoy, trabajadoresIds: [], plantaPresentacionId: '', cantidad: '' };
   
   const [formProduccion, setFormProduccion] = useState({ ...formBase, origenesIds: [], siembraTiempoHoras: '' });
   const [formCambio, setFormCambio] = useState({ 
     fecha: hoy, 
-    trabajadorId: '', 
+    trabajadoresIds: [], 
     destinoId: '', 
     cantidadDestino: '',
     detalles: [{ origenId: '', cantidad: '' }]
@@ -27,6 +27,17 @@ export default function Operaciones() {
   
   const [formDescargo, setFormDescargo] = useState({ ...formBase, detalle: '' });
   const [formEntrada, setFormEntrada] = useState({ ...formBase, tipo: 'compra', detalle: '', totalPrecio: '' });
+  
+  const [formCampo, setFormCampo] = useState({ 
+    fecha: hoy, 
+    trabajadoresIds: [], 
+    plantaPresentacionId: '', 
+    cantidad: '', 
+    tipo: 'Salida', 
+    lugaresIds: [],
+    // Para selects en cascada en Entrada
+    plantaIdTemp: ''
+  });
 
   useEffect(() => {
     cargarCatalogos();
@@ -59,7 +70,7 @@ export default function Operaciones() {
     try {
       await api.post('/produccion', {
         fecha: formProduccion.fecha,
-        trabajador: { id: formProduccion.trabajadorId },
+        trabajadores: formProduccion.trabajadoresIds.map(id => ({ id: Number(id) }) ),
         plantaPresentacion: { id: formProduccion.plantaPresentacionId },
         origenes: formProduccion.origenesIds.map(id => ({ id })),
         cantidad: Number(formProduccion.cantidad),
@@ -106,7 +117,7 @@ export default function Operaciones() {
     try {
       await api.post('/cambios-presentacion', {
         fecha: formCambio.fecha,
-        trabajador: { id: formCambio.trabajadorId },
+        trabajadores: formCambio.trabajadoresIds.map(id => ({ id: Number(id) }) ),
         destino: { id: formCambio.destinoId },
         cantidadDestino: Number(formCambio.cantidadDestino),
         detalles: formCambio.detalles.map(d => ({
@@ -116,7 +127,7 @@ export default function Operaciones() {
         createdBy: 'Liliam'
       });
       toast.success("Trasplante/Armado registrado con éxito. Inventario actualizado.");
-      setFormCambio({ fecha: hoy, trabajadorId: '', destinoId: '', cantidadDestino: '', detalles: [{ origenId: '', cantidad: '' }] });
+      setFormCambio({ fecha: hoy, trabajadoresIds: [], destinoId: '', cantidadDestino: '', detalles: [{ origenId: '', cantidad: '' }] });
       cargarCatalogos();
     } catch (error) { toast.error("Error: " + (error.response?.data || error.message)); }
   };
@@ -126,7 +137,7 @@ export default function Operaciones() {
     try {
       await api.post('/descargos', {
         fecha: formDescargo.fecha,
-        trabajador: { id: formDescargo.trabajadorId },
+        trabajadores: formDescargo.trabajadoresIds.map(id => ({ id: Number(id) }) ),
         plantaPresentacion: { id: formDescargo.plantaPresentacionId },
         cantidad: Number(formDescargo.cantidad),
         motivoDescargo: formDescargo.detalle,
@@ -143,7 +154,7 @@ export default function Operaciones() {
     try {
       await api.post('/entradas-exteriores', {
         fecha: formEntrada.fecha,
-        trabajador: { id: formEntrada.trabajadorId },
+        trabajadores: formEntrada.trabajadoresIds.map(id => ({ id: Number(id) }) ),
         plantaPresentacion: { id: formEntrada.plantaPresentacionId },
         tipo: formEntrada.tipo,
         cantidad: Number(formEntrada.cantidad),
@@ -157,7 +168,44 @@ export default function Operaciones() {
     } catch (error) { toast.error("Error: " + (error.response?.data || error.message)); }
   };
 
+  const handleSubmitCampo = async (e) => {
+    e.preventDefault();
+    if (formCampo.lugaresIds.length === 0) {
+      toast.error("Debes seleccionar al menos un lugar de siembra/extracción.");
+      return;
+    }
+    try {
+      await api.post('/campo', {
+        fecha: formCampo.fecha,
+        tipo: formCampo.tipo,
+        cantidad: Number(formCampo.cantidad),
+        plantaPresentacionId: Number(formCampo.plantaPresentacionId),
+        trabajadorIds: formCampo.trabajadoresIds.map(Number),
+        lugarIds: formCampo.lugaresIds.map(Number)
+      });
+      toast.success(`Operación de Campo (${formCampo.tipo}) registrada con éxito.`);
+      setFormCampo({ ...formCampo, trabajadoresIds: [], plantaPresentacionId: '', cantidad: '', lugaresIds: [], plantaIdTemp: '' });
+      cargarCatalogos();
+    } catch (error) { toast.error("Error: " + (error.response?.data || error.message)); }
+  };
+
   // --- HELPERS PARA FILTRADO INTELIGENTE ---
+  const plantasUnicas = Array.from(new Map(
+    inventario.map(i => {
+      if (i.esArregloCombinado) return ['arreglo', { id: 'arreglo', nombre: 'Arreglo Combinado' }];
+      if (i.planta) return [i.planta.id, i.planta];
+      return [null, null];
+    }).filter(x => x[0] !== null)
+  ).values());
+
+  const getPresentacionesPorPlanta = (plantaId) => {
+    if (!plantaId) return [];
+    return inventario.filter(i => 
+      (plantaId === 'arreglo' && i.esArregloCombinado) ||
+      (i.planta && String(i.planta.id) === String(plantaId))
+    );
+  };
+
   const getOrigenesDisponibles = (indexFiltrar) => {
     let disponibles = inventario.filter(i => i.stock > 0);
     const seleccionados = formCambio.detalles.map((d, i) => i !== indexFiltrar ? Number(d.origenId) : null).filter(Boolean);
@@ -188,9 +236,11 @@ export default function Operaciones() {
   // --- RENDERIZADO CONDICIONAL DE FORMULARIOS ---
   const SelectorTrabajador = ({ valor, setValor }) => (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Trabajador</label>
-      <select required value={valor} onChange={setValor} className="w-full border-gray-300 rounded-md p-2 border bg-white focus:ring-green-500">
-        <option value="">-- Seleccionar --</option>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Trabajadores (Puedes seleccionar varios)</label>
+      <select multiple required value={valor} onChange={e => {
+        const values = Array.from(e.target.selectedOptions, option => option.value);
+        setValor(values);
+      }} className="w-full border-gray-300 rounded-md p-2 border bg-white focus:ring-green-500 h-24 text-sm">
         {empleados.map(e => <option key={e.id} value={e.id}>{e.nombre} {e.apellido}</option>)}
       </select>
     </div>
@@ -225,7 +275,8 @@ export default function Operaciones() {
           { id: 'produccion', nombre: 'Producción (Siembra)' },
           { id: 'cambio', nombre: 'Cambio de Presentación' },
           { id: 'descargo', nombre: 'Descargo (Mermas)' },
-          { id: 'entrada', nombre: 'Entrada Exterior' }
+          { id: 'entrada', nombre: 'Entrada Exterior' },
+          { id: 'campo', nombre: 'Sembrado a Campo' }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -252,7 +303,7 @@ export default function Operaciones() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
                 <input required type="date" value={formProduccion.fecha} onChange={e => setFormProduccion({...formProduccion, fecha: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border" />
               </div>
-              <SelectorTrabajador valor={formProduccion.trabajadorId} setValor={e => setFormProduccion({...formProduccion, trabajadorId: e.target.value})} />
+              <SelectorTrabajador valor={formProduccion.trabajadoresIds} setValor={values => setFormProduccion({...formProduccion, trabajadoresIds: values})} />
               
               <div className="md:col-span-2">
                 <SelectorInventario label="Lote de Destino (Inventario a Sumar)" valor={formProduccion.plantaPresentacionId} setValor={e => setFormProduccion({...formProduccion, plantaPresentacionId: e.target.value})} />
@@ -291,7 +342,7 @@ export default function Operaciones() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
                 <input required type="date" value={formCambio.fecha} onChange={e => setFormCambio({...formCambio, fecha: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border" />
               </div>
-              <SelectorTrabajador valor={formCambio.trabajadorId} setValor={e => setFormCambio({...formCambio, trabajadorId: e.target.value})} />
+              <SelectorTrabajador valor={formCambio.trabajadoresIds} setValor={values => setFormCambio({...formCambio, trabajadoresIds: values})} />
               
               <div className="md:col-span-2 border-l-4 border-red-500 p-4 bg-red-50/50 rounded-r-md">
                 <h4 className="font-bold text-red-700 mb-4">Orígenes (Plantas a descontar)</h4>
@@ -349,7 +400,7 @@ export default function Operaciones() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
                 <input required type="date" value={formDescargo.fecha} onChange={e => setFormDescargo({...formDescargo, fecha: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border" />
               </div>
-              <SelectorTrabajador valor={formDescargo.trabajadorId} setValor={e => setFormDescargo({...formDescargo, trabajadorId: e.target.value})} />
+              <SelectorTrabajador valor={formDescargo.trabajadoresIds} setValor={values => setFormDescargo({...formDescargo, trabajadoresIds: values})} />
               
               <div className="md:col-span-2">
                 <SelectorInventario label="Lote Afectado (Se restará stock)" valor={formDescargo.plantaPresentacionId} setValor={e => setFormDescargo({...formDescargo, plantaPresentacionId: e.target.value})} opciones={inventario.filter(i => i.stock > 0)} />
@@ -377,7 +428,7 @@ export default function Operaciones() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
                 <input required type="date" value={formEntrada.fecha} onChange={e => setFormEntrada({...formEntrada, fecha: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border" />
               </div>
-              <SelectorTrabajador valor={formEntrada.trabajadorId} setValor={e => setFormEntrada({...formEntrada, trabajadorId: e.target.value})} />
+              <SelectorTrabajador valor={formEntrada.trabajadoresIds} setValor={values => setFormEntrada({...formEntrada, trabajadoresIds: values})} />
               
               <div className="md:col-span-2">
                 <SelectorInventario label="Lote de Destino (Inventario a Sumar)" valor={formEntrada.plantaPresentacionId} setValor={e => setFormEntrada({...formEntrada, plantaPresentacionId: e.target.value})} />
@@ -412,6 +463,79 @@ export default function Operaciones() {
           </form>
         )}
 
+
+        {/* 5. CAMPO */}
+        {tabActivo === 'campo' && (
+          <form onSubmit={handleSubmitCampo} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              <div className="md:col-span-2 flex space-x-6 border-b pb-4">
+                <label className="flex items-center space-x-2 cursor-pointer text-lg font-medium">
+                  <input type="radio" name="tipoCampo" value="Salida" checked={formCampo.tipo === 'Salida'} onChange={() => setFormCampo({...formCampo, tipo: 'Salida', plantaIdTemp: '', plantaPresentacionId: ''})} className="w-5 h-5 text-green-600 focus:ring-green-500" />
+                  <span>Sembrar a campo (Salida de Inv.)</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer text-lg font-medium">
+                  <input type="radio" name="tipoCampo" value="Entrada" checked={formCampo.tipo === 'Entrada'} onChange={() => setFormCampo({...formCampo, tipo: 'Entrada', plantaIdTemp: '', plantaPresentacionId: ''})} className="w-5 h-5 text-blue-600 focus:ring-blue-500" />
+                  <span>Sacar de campo (Entrada a Inv.)</span>
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                <input required type="date" value={formCampo.fecha} onChange={e => setFormCampo({...formCampo, fecha: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border" />
+              </div>
+              <SelectorTrabajador valor={formCampo.trabajadoresIds} setValor={values => setFormCampo({...formCampo, trabajadoresIds: values})} />
+              
+              {formCampo.tipo === 'Salida' ? (
+                <div className="md:col-span-2">
+                  <SelectorInventario label="Selecciona Lote a Sembrar (Restará stock)" valor={formCampo.plantaPresentacionId} setValor={e => setFormCampo({...formCampo, plantaPresentacionId: e.target.value})} opciones={inventario.filter(i => i.stock > 0)} />
+                </div>
+              ) : (
+                <div className="md:col-span-2 grid grid-cols-2 gap-4 border-l-4 border-blue-500 p-4 bg-blue-50/50 rounded-r-md">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">1. Planta (Sacada de campo)</label>
+                    <select required value={formCampo.plantaIdTemp} onChange={e => setFormCampo({...formCampo, plantaIdTemp: e.target.value, plantaPresentacionId: ''})} className="w-full border-gray-300 rounded-md p-2 border bg-white focus:ring-blue-500 text-sm">
+                      <option value="">-- Seleccionar Planta --</option>
+                      {plantasUnicas.map(p => (
+                        <option key={p.id} value={p.id}>{p.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">2. Presentación a Ingresar</label>
+                    <select required disabled={!formCampo.plantaIdTemp} value={formCampo.plantaPresentacionId} onChange={e => setFormCampo({...formCampo, plantaPresentacionId: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border bg-white focus:ring-blue-500 text-sm">
+                      <option value="">-- Seleccionar Presentación --</option>
+                      {getPresentacionesPorPlanta(formCampo.plantaIdTemp).map(i => (
+                        <option key={i.id} value={i.id}>
+                          [{i.codigo}] {i.presentacion?.nombre} (Stock actual: {i.stock})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Lugares (Viveros / Módulos)</label>
+                <select multiple required value={formCampo.lugaresIds} onChange={e => {
+                  const values = Array.from(e.target.selectedOptions, option => option.value);
+                  setFormCampo({...formCampo, lugaresIds: values});
+                }} className="w-full border-gray-300 rounded-md p-2 border bg-white h-24 text-sm">
+                  {origenes.map(o => <option key={o.id} value={o.id}>{o.codigo} - {o.nombre}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+                <input required type="number" min="1" value={formCampo.cantidad} onChange={e => setFormCampo({...formCampo, cantidad: e.target.value})} className="w-full border-gray-300 rounded-md p-2 border" />
+              </div>
+            </div>
+            
+            <button type="submit" className={`w-full font-bold py-3 rounded-md transition-colors shadow-sm text-white ${formCampo.tipo === 'Salida' ? 'bg-green-700 hover:bg-green-800' : 'bg-blue-600 hover:bg-blue-700'}`}>
+              Registrar {formCampo.tipo === 'Salida' ? 'Siembra a Campo' : 'Extracción de Campo'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

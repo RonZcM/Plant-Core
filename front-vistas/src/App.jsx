@@ -5,6 +5,7 @@ import Operaciones from './pages/Operaciones';
 import logoCaposa from './assets/CAPOSA-LOGO.png';
 import Empleados from './pages/Empleados';
 import Dashboard from './pages/Dashboard';
+import CatalogoVisor from './pages/CatalogoVisor';
 
 import { Toaster } from 'react-hot-toast';
 
@@ -38,6 +39,9 @@ function App() {
             <Link to="/operaciones" className="block py-2.5 px-4 rounded transition duration-200 hover:bg-green-700 hover:pl-6">
               Operaciones Diarias
             </Link>
+            <Link to="/catalogo-visual" className="block py-2.5 px-4 rounded transition duration-200 hover:bg-green-700 hover:pl-6">
+              Ver Catálogo
+            </Link>
             
             {/* SEPARADOR Y NUEVO ENLACE */}
             <div className="pt-4 mt-4 border-t border-green-700">
@@ -58,6 +62,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/inventario" element={<Inventario />} />
             <Route path="/operaciones" element={<Operaciones />} /> 
+            <Route path="/catalogo-visual" element={<CatalogoVisor />} />
             <Route path="/catalogos" element={<Catalogos />} />
             <Route path="/empleados" element={<Empleados />} />
           </Routes>

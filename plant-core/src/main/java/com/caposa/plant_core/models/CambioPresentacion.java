@@ -15,9 +15,13 @@ public class CambioPresentacion extends Auditable {
 
     private LocalDate fecha;
 
-    @ManyToOne
-    @JoinColumn(name = "trabajador_id", nullable = false)
-    private Empleado trabajador;
+    @ManyToMany
+    @JoinTable(
+        name = "cambio_presentacion_trabajadores",
+        joinColumns = @JoinColumn(name = "cambio_presentacion_id"),
+        inverseJoinColumns = @JoinColumn(name = "empleado_id")
+    )
+    private java.util.List<Empleado> trabajadores = new java.util.ArrayList<>();
 
     @ManyToOne
     @JoinColumn(name = "planta_presentacion_destino_id", nullable = false)
@@ -32,10 +36,10 @@ public class CambioPresentacion extends Auditable {
     public CambioPresentacion() {
     }
 
-    public CambioPresentacion(Long id, LocalDate fecha, Empleado trabajador, PlantaPresentacion destino, Integer cantidadDestino) {
+    public CambioPresentacion(Long id, LocalDate fecha, java.util.List<Empleado> trabajadores, PlantaPresentacion destino, Integer cantidadDestino) {
         this.id = id;
         this.fecha = fecha;
-        this.trabajador = trabajador;
+        this.trabajadores = trabajadores;
         this.destino = destino;
         this.cantidadDestino = cantidadDestino;
     }
@@ -56,12 +60,12 @@ public class CambioPresentacion extends Auditable {
         this.fecha = fecha;
     }
 
-    public Empleado getTrabajador() {
-        return trabajador;
+    public java.util.List<Empleado> getTrabajadores() {
+        return trabajadores;
     }
 
-    public void setTrabajador(Empleado trabajador) {
-        this.trabajador = trabajador;
+    public void setTrabajadores(java.util.List<Empleado> trabajadores) {
+        this.trabajadores = trabajadores;
     }
 
     public PlantaPresentacion getDestino() {

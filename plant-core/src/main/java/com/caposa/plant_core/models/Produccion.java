@@ -14,9 +14,13 @@ public class Produccion extends Auditable {
     @Column(nullable = false)
     private LocalDate fecha;
 
-    @ManyToOne
-    @JoinColumn(name = "trabajador_id", nullable = false)
-    private Empleado trabajador;
+    @ManyToMany
+    @JoinTable(
+        name = "produccion_trabajadores",
+        joinColumns = @JoinColumn(name = "produccion_id"),
+        inverseJoinColumns = @JoinColumn(name = "empleado_id")
+    )
+    private java.util.List<Empleado> trabajadores = new java.util.ArrayList<>();
 
     @ManyToOne
     @JoinColumn(name = "planta_presentacion_id", nullable = false)
@@ -41,8 +45,8 @@ public class Produccion extends Auditable {
     public void setId(Long id) { this.id = id; }
     public LocalDate getFecha() { return fecha; }
     public void setFecha(LocalDate fecha) { this.fecha = fecha; }
-    public Empleado getTrabajador() { return trabajador; }
-    public void setTrabajador(Empleado trabajador) { this.trabajador = trabajador; }
+    public java.util.List<Empleado> getTrabajadores() { return trabajadores; }
+    public void setTrabajadores(java.util.List<Empleado> trabajadores) { this.trabajadores = trabajadores; }
     public PlantaPresentacion getPlantaPresentacion() { return plantaPresentacion; }
     public void setPlantaPresentacion(PlantaPresentacion plantaPresentacion) { this.plantaPresentacion = plantaPresentacion; }
     public java.util.Set<Origen> getOrigenes() { return origenes; }

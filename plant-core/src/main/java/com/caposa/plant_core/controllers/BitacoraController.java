@@ -20,18 +20,28 @@ public class BitacoraController {
     @Autowired private CambioPresentacionRepository cambioRepo;
     @Autowired private DescargoRepository descargoRepo;
     @Autowired private EntradaExteriorRepository entradaRepo;
+    @Autowired private CampoRepository campoRepo;
 
     @GetMapping
-    public List<MovimientoDTO> obtenerHistorial() {
+    public List<MovimientoDTO> obtenerHistorial(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate) {
+            
+        if (startDate == null) startDate = java.time.LocalDate.now().withDayOfMonth(1);
+        if (endDate == null) endDate = java.time.LocalDate.now().withDayOfMonth(java.time.LocalDate.now().lengthOfMonth());
+        
+        final java.time.LocalDate fStart = startDate;
+        final java.time.LocalDate fEnd = endDate;
         List<MovimientoDTO> historial = new ArrayList<>();
 
         // 1. Producciones
         for (Produccion p : produccionRepo.findAll()) {
+            if (p.getFecha().isBefore(fStart) || p.getFecha().isAfter(fEnd)) continue;
             MovimientoDTO dto = new MovimientoDTO();
             dto.setIdOperacion("PROD-" + p.getId());
             dto.setTipo("Producción");
             dto.setFecha(p.getFecha());
-            dto.setEmpleado(p.getTrabajador().getNombre() + " " + p.getTrabajador().getApellido());
+            dto.setEmpleado(p.getTrabajadores() != null ? p.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "");
             String origenesNombres = p.getOrigenes().stream().map(Origen::getNombre).collect(Collectors.joining(", "));
             dto.setDetalle("Siembra de: [" + p.getPlantaPresentacion().getCodigo() + "] - Orígenes: " + origenesNombres);
             dto.setCantidad(p.getCantidad());
@@ -41,13 +51,14 @@ public class BitacoraController {
 
         // 2. Trasplantes (Cambios)
         for (CambioPresentacion c : cambioRepo.findAll()) {
+            if (c.getFecha().isBefore(fStart) || c.getFecha().isAfter(fEnd)) continue;
             if (c.getDetalles() != null && !c.getDetalles().isEmpty()) {
                 for (com.caposa.plant_core.models.CambioPresentacionDetalle det : c.getDetalles()) {
                     MovimientoDTO dto = new MovimientoDTO();
                     dto.setIdOperacion("TRAS-" + c.getId() + "-" + det.getId());
                     dto.setTipo("Cambio Presentación");
                     dto.setFecha(c.getFecha());
-                    dto.setEmpleado(c.getTrabajador().getNombre() + " " + c.getTrabajador().getApellido());
+                    dto.setEmpleado(c.getTrabajadores() != null ? c.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "");
                     dto.setDetalle("De: [" + det.getOrigen().getCodigo() + "] (" + det.getCantidadOrigen() + ") hacia: [" + c.getDestino().getCodigo() + "]");
                     // En la bitácora simplificada (UI) ponemos la cantidad que salió de la planta origen o destino?
                     // Mejor mostramos la cantidad final generada si es la primera fila, o simplemente referimos al destino
@@ -61,7 +72,7 @@ public class BitacoraController {
                 dto.setIdOperacion("TRAS-" + c.getId());
                 dto.setTipo("Cambio Presentación");
                 dto.setFecha(c.getFecha());
-                dto.setEmpleado(c.getTrabajador().getNombre() + " " + c.getTrabajador().getApellido());
+                dto.setEmpleado(c.getTrabajadores() != null ? c.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "");
                 dto.setDetalle("Hacia: [" + c.getDestino().getCodigo() + "]");
                 dto.setCantidad(c.getCantidadDestino());
                 dto.setFechaRegistro(c.getCreatedAt());
@@ -71,11 +82,12 @@ public class BitacoraController {
 
         // 3. Descargos
         for (Descargo d : descargoRepo.findAll()) {
+            if (d.getFecha().isBefore(fStart) || d.getFecha().isAfter(fEnd)) continue;
             MovimientoDTO dto = new MovimientoDTO();
             dto.setIdOperacion("BAJA-" + d.getId());
             dto.setTipo("Descargo");
             dto.setFecha(d.getFecha());
-            dto.setEmpleado(d.getTrabajador().getNombre() + " " + d.getTrabajador().getApellido());
+            dto.setEmpleado(d.getTrabajadores() != null ? d.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "");
             dto.setDetalle("Lote: [" + d.getPlantaPresentacion().getCodigo() + "] - Motivo: " + d.getMotivoDescargo());
             dto.setCantidad(d.getCantidad());
             dto.setFechaRegistro(d.getCreatedAt());
@@ -84,14 +96,32 @@ public class BitacoraController {
 
         // 4. Entradas Exteriores
         for (EntradaExterior e : entradaRepo.findAll()) {
+            if (e.getFecha().isBefore(fStart) || e.getFecha().isAfter(fEnd)) continue;
             MovimientoDTO dto = new MovimientoDTO();
             dto.setIdOperacion("ENT-" + e.getId());
             dto.setTipo("Entrada Exterior");
             dto.setFecha(e.getFecha());
-            dto.setEmpleado(e.getTrabajador().getNombre() + " " + e.getTrabajador().getApellido());
+            dto.setEmpleado(e.getTrabajadores() != null ? e.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "");
             dto.setDetalle("Lote: [" + e.getPlantaPresentacion().getCodigo() + "] - Tipo: " + e.getTipo());
             dto.setCantidad(e.getCantidad());
             dto.setFechaRegistro(e.getCreatedAt());
+            historial.add(dto);
+        }
+
+        // 5. Campo
+        for (Campo c : campoRepo.findAll()) {
+            if (c.getFecha().isBefore(fStart) || c.getFecha().isAfter(fEnd)) continue;
+            MovimientoDTO dto = new MovimientoDTO();
+            dto.setIdOperacion("CAMP-" + c.getId());
+            dto.setTipo(c.getTipo().equals("Salida") ? "Campo (Salida)" : "Campo (Entrada)");
+            dto.setFecha(c.getFecha());
+            dto.setEmpleado(c.getTrabajadores() != null ? c.getTrabajadores().stream().map(com.caposa.plant_core.models.Empleado::getNombre).collect(java.util.stream.Collectors.joining("-")) : "");
+            
+            String lugaresNombres = c.getLugares().stream().map(Origen::getNombre).collect(Collectors.joining(", "));
+            String det = c.getTipo().equals("Salida") ? "Sembrado en: " + lugaresNombres : "Extraído de: " + lugaresNombres;
+            dto.setDetalle("Lote: [" + c.getPlantaPresentacion().getCodigo() + "] - " + det);
+            dto.setCantidad(c.getCantidad());
+            dto.setFechaRegistro(c.getCreatedAt());
             historial.add(dto);
         }
 
@@ -104,9 +134,15 @@ public class BitacoraController {
     @Autowired private com.caposa.plant_core.services.ExcelExportService excelExportService;
 
     @GetMapping("/exportar")
-    public org.springframework.http.ResponseEntity<byte[]> exportarExcel() {
+    public org.springframework.http.ResponseEntity<byte[]> exportarExcel(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate) {
+        
+        if (startDate == null) startDate = java.time.LocalDate.now().withDayOfMonth(1);
+        if (endDate == null) endDate = java.time.LocalDate.now().withDayOfMonth(java.time.LocalDate.now().lengthOfMonth());
+        
         try {
-            byte[] excelContent = excelExportService.exportarBitacora();
+            byte[] excelContent = excelExportService.exportarBitacora(startDate, endDate);
 
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));

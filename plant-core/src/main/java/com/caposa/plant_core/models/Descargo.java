@@ -15,9 +15,13 @@ public class Descargo extends Auditable {
 
     private LocalDate fecha;
 
-    @ManyToOne
-    @JoinColumn(name = "trabajador_id", nullable = false)
-    private Empleado trabajador;
+    @ManyToMany
+    @JoinTable(
+        name = "descargo_trabajadores",
+        joinColumns = @JoinColumn(name = "descargo_id"),
+        inverseJoinColumns = @JoinColumn(name = "empleado_id")
+    )
+    private java.util.List<Empleado> trabajadores = new java.util.ArrayList<>();
 
     @ManyToOne
     @JoinColumn(name = "planta_presentacion_id", nullable = false)
@@ -32,10 +36,10 @@ public class Descargo extends Auditable {
     public Descargo() {
     }
 
-    public Descargo(Long id, LocalDate fecha, Empleado trabajador, PlantaPresentacion plantaPresentacion, Integer cantidad, String motivoDescargo, LocalDateTime crbyat, LocalDateTime upbyat) {
+    public Descargo(Long id, LocalDate fecha, java.util.List<Empleado> trabajadores, PlantaPresentacion plantaPresentacion, Integer cantidad, String motivoDescargo, LocalDateTime crbyat, LocalDateTime upbyat) {
         this.id = id;
         this.fecha = fecha;
-        this.trabajador = trabajador;
+        this.trabajadores = trabajadores;
         this.plantaPresentacion = plantaPresentacion;
         this.cantidad = cantidad;
         this.motivoDescargo = motivoDescargo;
@@ -57,12 +61,12 @@ public class Descargo extends Auditable {
         this.fecha = fecha;
     }
 
-    public Empleado getTrabajador() {
-        return trabajador;
+    public java.util.List<Empleado> getTrabajadores() {
+        return trabajadores;
     }
 
-    public void setTrabajador(Empleado trabajador) {
-        this.trabajador = trabajador;
+    public void setTrabajadores(java.util.List<Empleado> trabajadores) {
+        this.trabajadores = trabajadores;
     }
 
     public PlantaPresentacion getPlantaPresentacion() {
