@@ -1,122 +1,75 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import Inventario from './pages/Inventario';
+import Catalogos from './pages/Catalogos';
+import Operaciones from './pages/Operaciones';
+import logoCaposa from './assets/CAPOSA-LOGO.png';
+import Empleados from './pages/Empleados';
+import Dashboard from './pages/Dashboard';
+import CatalogoVisor from './pages/CatalogoVisor';
+
+import { Toaster } from 'react-hot-toast';
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <Router>
+      <div className="flex h-screen bg-gray-100 font-sans">
+        <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
+        {/* Sidebar */}
+        <aside className="w-64 bg-green-800 text-white flex flex-col shadow-lg z-10 shrink-0">
+          
+          {/* Logo y Encabezado */}
+          <div className="p-6 border-b border-green-700 flex flex-col items-center text-center">
+            <div className="bg-black/45 p-2 rounded-xl mb-3 shadow-sm backdrop-blur-sm">
+              <img 
+                src={logoCaposa} 
+                alt="CAPOSA S.A. de C.V." 
+                className="w-32 h-auto drop-shadow-md object-contain"
+              />
+            </div>
+            <h1 className="text-xl font-bold tracking-widest text-green-50">PLANT-CORE</h1>
+          </div>
+          
+          <nav className="flex-1 px-4 space-y-2 mt-6">
+            <Link to="/" className="block py-2.5 px-4 rounded transition duration-200 hover:bg-green-700 hover:pl-6">
+              Bitácora General
+            </Link>
+            <Link to="/inventario" className="block py-2.5 px-4 rounded transition duration-200 hover:bg-green-700 hover:pl-6">
+              Inventario
+            </Link>
+            <Link to="/operaciones" className="block py-2.5 px-4 rounded transition duration-200 hover:bg-green-700 hover:pl-6">
+              Operaciones Diarias
+            </Link>
+            <Link to="/catalogo-visual" className="block py-2.5 px-4 rounded transition duration-200 hover:bg-green-700 hover:pl-6">
+              Ver Catálogo
+            </Link>
+            
+            {/* SEPARADOR Y NUEVO ENLACE */}
+            <div className="pt-4 mt-4 border-t border-green-700">
+              <p className="px-4 text-xs font-semibold text-green-400 uppercase tracking-wider mb-2">Administración</p>
+              <Link to="/catalogos" className="block py-2.5 px-4 rounded transition duration-200 hover:bg-green-700 hover:pl-6">
+                Gestión de Catálogos
+              </Link>
+              <Link to="/empleados" className="block py-2.5 px-4 rounded transition duration-200 hover:bg-green-700 hover:pl-6">
+                Personal
+              </Link>
+            </div>
+          </nav>
+        </aside>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {/* Main Content */}
+        <main className="flex-1 p-8 overflow-y-auto w-full">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/inventario" element={<Inventario />} />
+            <Route path="/operaciones" element={<Operaciones />} /> 
+            <Route path="/catalogo-visual" element={<CatalogoVisor />} />
+            <Route path="/catalogos" element={<Catalogos />} />
+            <Route path="/empleados" element={<Empleados />} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
+  );
 }
 
-export default App
+export default App;

@@ -1,0 +1,199 @@
+empleados{
+  id (BIGINT, PK)
+  nombre (VARCHAR(100))
+  apellido (VARCHAR(100))
+  dui (VARCHAR(10))
+  numero (VARCHAR(20))
+  fecha_contratacion (DATE)
+  crbyat (TIMESTAMP)
+  upbyat (TIMESTAMP)
+}
+
+usuarios{
+  id (BIGINT, PK)
+  empleado_id (BIGINT, FK a empleados.id)
+  usuario (VARCHAR(50))
+  contrasena (VARCHAR(255))
+  crbyat (TIMESTAMP)
+  upbyat (TIMESTAMP)
+}
+
+presentaciones{
+  id (BIGINT, PK)
+  codigo (VARCHAR(20))
+  nombre (VARCHAR(50)) // Ejemplos: Maceta, Bolsa, Canasta
+  cc (INT) // Cantidad fija de sustrato utilizada por la presentación.
+  requisicion (INT) // Número o código de control utilizado en bodega
+  crbyat (TIMESTAMP)
+  upbyat (TIMESTAMP)
+}
+
+origen{
+  id (BIGINT, PK)
+  codigo (VARCHAR(20))
+  nombre (VARCHAR(100))
+  crbyat (TIMESTAMP)
+  upbyat (TIMESTAMP)
+}
+
+planta_origen{
+  id (BIGINT, PK)
+  planta_id (BIGINT, FK a plantas.id)
+  origen_id (BIGINT, FK a origen.id)
+  crbyat (TIMESTAMP)
+  upbyat (TIMESTAMP)
+}
+
+plantas{
+  id (BIGINT, PK)
+  codigo (VARCHAR(20))
+  nombre (VARCHAR(100))
+  nombre_cientifico (VARCHAR(150))
+  imagen (VARCHAR(255))
+  crbyat (TIMESTAMP)
+  upbyat (TIMESTAMP)
+}
+
+planta_presentacion{
+  id (BIGINT, PK)
+  planta_id (BIGINT, FK a plantas.id, NULLABLE) // Puede ser null si es un arreglo combinado
+  es_arreglo_combinado (BOOLEAN) // Indica si es una mezcla de plantas
+  presentacion_id (BIGINT, FK a presentaciones.id)
+  codigo (VARCHAR(20)) // Código único de inventario. Ejemplo: PQCA01001
+  detalle (VARCHAR(255)) // Descripción estática o información complementaria.
+  stock (INT) // Existencias actuales.
+  tamanio (VARCHAR(50)) // Ejemplo: 8 pulgadas, 40 cm.
+  crbyat (TIMESTAMP)
+  upbyat (TIMESTAMP)
+}
+
+produccion{
+  id (BIGINT, PK)
+  fecha (DATE)
+  trabajador_id (BIGINT, FK a empleados.id)
+  planta_presentacion_id (BIGINT, FK a planta_presentacion.id)
+  cantidad (INT) // Cantidad producida que se agregará al stock de planta_presentacion
+  siembra_tiempo_horas (INT) // Tiempo empleado en horas (Ejemplo: 2)
+  crbyat (TIMESTAMP)
+  upbyat (TIMESTAMP)
+}
+
+produccion_origen{
+  produccion_id (BIGINT, FK a produccion.id)
+  origen_id (BIGINT, FK a origen.id)
+  // Tabla intermedia para relación N:M
+}
+
+cambio_presentacion{
+  id (BIGINT, PK)
+  fecha (DATE)
+  trabajador_id (BIGINT, FK a empleados.id)
+  planta_presentacion_destino_id (BIGINT, FK a planta_presentacion.id)
+  cantidad_destino (INT) // Se suma al destino
+  crbyat (TIMESTAMP)
+  upbyat (TIMESTAMP)
+}
+
+cambio_presentacion_detalle{
+  id (BIGINT, PK)
+  cambio_presentacion_id (BIGINT, FK a cambio_presentacion.id)
+  planta_presentacion_origen_id (BIGINT, FK a planta_presentacion.id)
+  cantidad_origen (INT) // Se descuenta del origen
+}
+
+descargo{
+  id (BIGINT, PK)
+  fecha (DATE)
+  trabajador_id (BIGINT, FK a empleados.id)
+  planta_presentacion_id (BIGINT, FK a planta_presentacion.id)
+  cantidad (INT) // Cantidad descontada del inventario
+  detalle (VARCHAR(255)) // Motivo del descargo. Ejemplo: plantas muertas
+  crbyat (TIMESTAMP)
+  upbyat (TIMESTAMP)
+
+  // CAMPOS DE REFERENCIA PARA JOINS:
+  // nombre_planta (JOIN por medio de planta_presentacion.planta_id -> plantas.nombre)
+  // presentacion (JOIN por medio de planta_presentacion.presentacion_id -> presentaciones.nombre)
+  // codigo (JOIN por medio de planta_presentacion.codigo)
+  // requisicion (JOIN por medio de presentaciones.requisicion)
+}
+
+entrada_exterior{
+  id (BIGINT, PK)
+  fecha (DATE)
+  trabajador_id (BIGINT, FK a empleados.id)
+  planta_presentacion_id (BIGINT, FK a planta_presentacion.id)
+  tipo (VARCHAR(255)) // compra/devolucion
+  cantidad (INT) // Cantidad agregada al inventario
+  detalle (VARCHAR(255)) // Ejemplo: compra de plantas del vivero de soya
+  total_precio (DOUBLE, NULLABLE) // Vacío si es devolución
+  crbyat (TIMESTAMP)
+  upbyat (TIMESTAMP)
+
+  // CAMPOS DE REFERENCIA PARA JOINS:
+  // nombre_planta (JOIN por medio de planta_presentacion.planta_id -> plantas.nombre)
+  // presentacion (JOIN por medio de planta_presentacion.presentacion_id -> presentaciones.nombre)
+  // codigo (JOIN por medio de planta_presentacion.codigo)
+  // requisicion (JOIN por medio de presentaciones.requisicion)
+}
+
+
+CREATE VIEW vista_bitacora_ml AS
+
+-- 1. Movimientos de Producción
+SELECT 
+    id AS movimiento_id,
+    'Producción' AS tipo_movimiento,
+    fecha,
+    strftime('%Y', fecha) AS anio,
+    trabajador_id,
+    planta_presentacion_id AS planta_presentacion_origen_id,
+    NULL AS planta_presentacion_destino_id,
+    cantidad,
+    'Tiempo siembra: ' || siembra_tiempo_horas || ' horas' AS detalle
+FROM produccion
+
+UNION ALL
+
+-- 2. Movimientos de Cambio de Presentación
+SELECT 
+    id AS movimiento_id,
+    'Cambio de Presentación' AS tipo_movimiento,
+    fecha,
+    strftime('%Y', fecha) AS anio,
+    trabajador_id,
+    planta_presentacion_origen_id,
+    planta_presentacion_destino_id,
+    cantidad,
+    NULL AS detalle
+FROM cambio_presentacion
+
+UNION ALL
+
+-- 3. Movimientos de Descargo
+SELECT 
+    id AS movimiento_id,
+    'Descargo' AS tipo_movimiento,
+    fecha,
+    strftime('%Y', fecha) AS anio,
+    trabajador_id,
+    planta_presentacion_id AS planta_presentacion_origen_id,
+    NULL AS planta_presentacion_destino_id,
+    cantidad,
+    detalle
+FROM descargo
+
+UNION ALL
+
+-- 4. Movimientos de Entrada Exterior
+SELECT 
+    id AS movimiento_id,
+    'Entrada Exterior (' || tipo || ')' AS tipo_movimiento,
+    fecha,
+    strftime('%Y', fecha) AS anio,
+    trabajador_id,
+    NULL AS planta_presentacion_origen_id, 
+    planta_presentacion_id AS planta_presentacion_destino_id,
+    cantidad,
+    detalle
+FROM entrada_exterior;
