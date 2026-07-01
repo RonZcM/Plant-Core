@@ -23,6 +23,7 @@ public class ExcelExportService {
     @Autowired private EntradaExteriorRepository entradaRepo;
     @Autowired private CampoRepository campoRepo;
     @Autowired private PresentacionRepository presentacionRepo;
+    @Autowired private EmpleadoRepository empleadoRepo;
 
     public byte[] exportarBitacora(LocalDate startDate, LocalDate endDate) throws IOException {
         try (Workbook workbook = new XSSFWorkbook()) {
@@ -671,5 +672,75 @@ public class ExcelExportService {
         private String tipo; private LocalDate fecha; private String trabajador; private Integer cantidad; private Object entidad;
         public MovimientoResumen(String tipo, LocalDate fecha, String trabajador, Integer cantidad, Object entidad) { this.tipo = tipo; this.fecha = fecha; this.trabajador = trabajador; this.cantidad = cantidad; this.entidad = entidad; }
         public String getTipo() { return tipo; } public LocalDate getFecha() { return fecha; } public String getTrabajador() { return trabajador; } public Integer getCantidad() { return cantidad; } public Object getEntidad() { return entidad; }
+    }
+
+    public byte[] exportarEmpleados() throws IOException {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            List<Empleado> empleados = empleadoRepo.findAll();
+            crearHojaEmpleados(workbook, empleados);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    private void crearHojaEmpleados(Workbook workbook, List<Empleado> empleados) {
+        Sheet sheet = workbook.createSheet("Personal");
+        sheet.createFreezePane(0, 3);
+
+        CellStyle styleTitle = workbook.createCellStyle();
+        Font fontTitle = workbook.createFont();
+        fontTitle.setBold(true);
+        fontTitle.setFontHeightInPoints((short) 14);
+        styleTitle.setFont(fontTitle);
+        styleTitle.setAlignment(HorizontalAlignment.CENTER);
+        styleTitle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        Row titleRow = sheet.createRow(0);
+        titleRow.setHeightInPoints(25);
+        Cell titleCell = titleRow.createCell(0);
+        titleCell.setCellValue("LISTADO DE PERSONAL - CAPOSA");
+        titleCell.setCellStyle(styleTitle);
+        sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 5));
+
+        Row subRow = sheet.createRow(1);
+        Cell subCell = subRow.createCell(0);
+        subCell.setCellValue("Fecha de generación: " + LocalDate.now().toString());
+        CellStyle styleSub = workbook.createCellStyle();
+        Font fontSub = workbook.createFont();
+        fontSub.setItalic(true);
+        styleSub.setFont(fontSub);
+        subCell.setCellStyle(styleSub);
+        sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 5));
+
+        Row headerRow = sheet.createRow(2);
+        headerRow.setHeightInPoints(22);
+        CellStyle headerStyle = createHeaderStyle(workbook, IndexedColors.DARK_BLUE, true);
+
+        String[] headers = {"ID", "Nombres", "Apellidos", "DUI", "Teléfono", "Fecha Contratación"};
+        for (int i = 0; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            cell.setCellStyle(headerStyle);
+            sheet.setColumnWidth(i, i == 0 ? 2000 : 5000);
+        }
+
+        CellStyle dataStyle = createDataStyle(workbook, false);
+        int rowNum = 3;
+        for (Empleado emp : empleados) {
+            Row row = sheet.createRow(rowNum++);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = row.createCell(i);
+                cell.setCellStyle(dataStyle);
+            }
+            if (emp.getId() != null) {
+                row.getCell(0).setCellValue(emp.getId());
+            }
+            row.getCell(1).setCellValue(emp.getNombre() != null ? emp.getNombre() : "");
+            row.getCell(2).setCellValue(emp.getApellido() != null ? emp.getApellido() : "");
+            row.getCell(3).setCellValue(emp.getDui() != null ? emp.getDui() : "");
+            row.getCell(4).setCellValue(emp.getNumero() != null && !emp.getNumero().isEmpty() ? emp.getNumero() : "N/A");
+            row.getCell(5).setCellValue(emp.getFechaContratacion() != null && !emp.getFechaContratacion().isEmpty() ? emp.getFechaContratacion() : "N/A");
+        }
     }
 }
