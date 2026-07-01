@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { Download } from 'lucide-react';
 
 export default function Empleados() {
   const [empleados, setEmpleados] = useState([]);
@@ -72,6 +73,26 @@ export default function Empleados() {
     setFormulario({ nombre: '', apellido: '', dui: '', numero: '', fechaContratacion: '', createdBy: 'Admin' });
   };
 
+  const exportarExcel = async () => {
+    try {
+      const response = await api.get('/empleados/exportar', {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'empleados.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Listado de personal exportado con éxito.");
+    } catch (error) {
+      console.error("Error exportando a Excel", error);
+      toast.error("No se pudo exportar el listado de personal a Excel.");
+    }
+  };
+
   const filtrados = empleados.filter(e => 
     `${e.nombre} ${e.apellido}`.toLowerCase().includes(busqueda.toLowerCase()) || 
     e.dui.includes(busqueda)
@@ -79,9 +100,18 @@ export default function Empleados() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h2 className="text-2xl font-extrabold text-gray-800">Gestión de Personal</h2>
-        <p className="text-sm text-gray-500 mt-1">Administración de la planilla de trabajadores de CAPOSA.</p>
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-extrabold text-gray-800">Gestión de Personal</h2>
+          <p className="text-sm text-gray-500 mt-1">Administración de la planilla de trabajadores de CAPOSA.</p>
+        </div>
+        <button 
+          onClick={exportarExcel} 
+          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center transform hover:-translate-y-0.5"
+        >
+          <Download className="w-5 h-5 mr-2" />
+          Exportar
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -12,6 +12,7 @@ public class CambioPresentacionDetalle {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cambio_presentacion_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private CambioPresentacion cambioPresentacion;
 
     @ManyToOne(fetch = FetchType.EAGER)

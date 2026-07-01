@@ -18,9 +18,28 @@ public class EmpleadoController {
     @Autowired
     private EmpleadoRepository empleadoRepo;
 
+    @Autowired
+    private com.caposa.plant_core.services.ExcelExportService excelExportService;
+
     @GetMapping
     public List<Empleado> obtenerTodos() {
         return empleadoRepo.findAll();
+    }
+
+    @GetMapping("/exportar")
+    public ResponseEntity<byte[]> exportarExcel() {
+        try {
+            byte[] excelContent = excelExportService.exportarEmpleados();
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentDispositionFormData("attachment", "empleados.xlsx");
+            headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+            return new ResponseEntity<>(excelContent, headers, org.springframework.http.HttpStatus.OK);
+        } catch (java.io.IOException e) {
+            return new ResponseEntity<>(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PostMapping
