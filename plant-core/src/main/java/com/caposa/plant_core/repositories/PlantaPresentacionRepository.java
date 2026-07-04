@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface PlantaPresentacionRepository extends JpaRepository<PlantaPresentacion, Long> {
     boolean existsByPlantaIdAndPresentacionId(Long plantaId, Long presentacionId);
     boolean existsByCodigo(String codigo);
+    Optional<PlantaPresentacion> findByCodigo(String codigo);
 }
