@@ -154,4 +154,25 @@ public class BitacoraController {
             return new org.springframework.http.ResponseEntity<>(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.caposa.plant_core.services.ExcelImportService excelImportService;
+
+    @PostMapping("/importar")
+    public org.springframework.http.ResponseEntity<?> importarExcel(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        try {
+            if (file.isEmpty()) {
+                return org.springframework.http.ResponseEntity.badRequest().body("El archivo está vacío.");
+            }
+            String filename = file.getOriginalFilename();
+            if (filename == null || !filename.toLowerCase().endsWith(".xlsx")) {
+                return org.springframework.http.ResponseEntity.badRequest().body("Solo se permiten archivos .xlsx");
+            }
+            com.caposa.plant_core.models.dto.ImportResultDTO result = excelImportService.importarBitacora(file);
+            return org.springframework.http.ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return org.springframework.http.ResponseEntity.badRequest().body("Error al importar: " + e.getMessage());
+        }
+    }
 }

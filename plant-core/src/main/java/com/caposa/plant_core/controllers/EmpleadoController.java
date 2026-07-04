@@ -86,4 +86,24 @@ public class EmpleadoController {
             }
         }).orElse(ResponseEntity.notFound().build());
     }
+
+    @Autowired
+    private com.caposa.plant_core.services.ExcelImportService excelImportService;
+
+    @PostMapping("/importar")
+    public ResponseEntity<?> importarExcel(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        try {
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body("El archivo está vacío.");
+            }
+            String filename = file.getOriginalFilename();
+            if (filename == null || !filename.toLowerCase().endsWith(".xlsx")) {
+                return ResponseEntity.badRequest().body("Solo se permiten archivos .xlsx");
+            }
+            com.caposa.plant_core.models.dto.ImportResultDTO result = excelImportService.importarEmpleados(file);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error al importar: " + e.getMessage());
+        }
+    }
 }
