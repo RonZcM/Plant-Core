@@ -10,6 +10,6 @@ public class WebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // Mapea la URL /fotos/ a la ruta del directorio físico que está un nivel atrás del core
         registry.addResourceHandler("/fotos/**")
-                .addResourceLocations("file:../recursos/fotos/");
+                .addResourceLocations("file:recursos/fotos/");
     }
 }
